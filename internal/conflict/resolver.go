@@ -223,7 +223,7 @@ func (r *Resolver) RestoreBackupFiles() error {
 		if entry.IsDir() {
 			continue
 		}
-		
+
 		// Extract timestamp from filename (format: path_timestamp)
 		name := entry.Name()
 		underscorePos := strings.LastIndex(name, "_")
@@ -253,7 +253,7 @@ func (r *Resolver) RestoreBackupFiles() error {
 
 		// Remove timestamp to get the flattened path
 		flatPath := strings.TrimSuffix(name, "_"+latestTimestamp)
-		
+
 		// Reconstruct original path under .claude/agents/
 		// Replace underscores with slashes to restore directory structure
 		relativePath := strings.ReplaceAll(flatPath, "_", "/")
@@ -283,7 +283,7 @@ func (r *Resolver) RestoreBackupFiles() error {
 // RestoreBackupFilesWithTracking restores files from flat file backups and returns which files were restored
 func (r *Resolver) RestoreBackupFilesWithTracking() (map[string]bool, error) {
 	restoredFiles := make(map[string]bool)
-	
+
 	if r.backupDir == "" {
 		return restoredFiles, nil
 	}
@@ -303,7 +303,7 @@ func (r *Resolver) RestoreBackupFilesWithTracking() (map[string]bool, error) {
 		if entry.IsDir() {
 			continue
 		}
-		
+
 		// Extract timestamp from filename (format: path_timestamp)
 		name := entry.Name()
 		underscorePos := strings.LastIndex(name, "_")
@@ -333,7 +333,7 @@ func (r *Resolver) RestoreBackupFilesWithTracking() (map[string]bool, error) {
 
 		// Remove timestamp to get the flattened path
 		flatPath := strings.TrimSuffix(name, "_"+latestTimestamp)
-		
+
 		// Reconstruct original path under .claude/agents/
 		// Replace underscores with slashes to restore directory structure
 		relativePath := strings.ReplaceAll(flatPath, "_", "/")
@@ -480,24 +480,24 @@ func (r *Resolver) CleanupOldBackups(maxAge time.Duration) error {
 
 func (r *Resolver) getBackupPath(originalPath string) string {
 	timestamp := time.Now().Format("20060102-150405")
-	
+
 	// Clean the original path
 	cleanedPath := filepath.Clean(originalPath)
-	
+
 	// Check if this is a file under .claude/agents/
 	agentsPrefix := ".claude/agents/"
 	if strings.HasPrefix(cleanedPath, agentsPrefix) {
 		// Extract relative path from .claude/agents/
 		relativePath := strings.TrimPrefix(cleanedPath, agentsPrefix)
-		
+
 		// Replace path separators with underscores to create flat backup filename
 		// Example: "foo/agent.md" becomes "foo_agent.md"
 		flatPath := strings.ReplaceAll(relativePath, "/", "_")
 		backupName := fmt.Sprintf("%s_%s", flatPath, timestamp)
-		
+
 		return filepath.Join(r.backupDir, backupName)
 	}
-	
+
 	// Fallback for files not in .claude/agents/ - just use filename
 	filename := filepath.Base(cleanedPath)
 	backupName := fmt.Sprintf("%s_%s", filename, timestamp)

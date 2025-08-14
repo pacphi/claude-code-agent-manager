@@ -248,7 +248,7 @@ func (i *Installer) UninstallSource(sourceName string) error {
 				}
 				continue
 			}
-			
+
 			// Skip removing pre-existing files - they should remain after uninstall
 			if fileInfo.WasPreExisting {
 				if i.options.Verbose {
@@ -256,7 +256,7 @@ func (i *Installer) UninstallSource(sourceName string) error {
 				}
 				continue
 			}
-			
+
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				color.Red("Failed to remove %s: %v\n", path, err)
 			} else if i.options.Verbose {
@@ -466,23 +466,23 @@ func (i *Installer) runPostInstall(action config.PostInstall) error {
 	// Prepare the command
 	args := append([]string{}, action.Args...)
 	cmd := exec.Command("bash", append([]string{action.Path}, args...)...)
-	
+
 	// Set working directory to project root
 	cmd.Dir, _ = os.Getwd()
-	
+
 	// Set up environment
 	cmd.Env = os.Environ()
-	
+
 	// Capture output
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("post-install script failed: %s\nOutput: %s", err, string(output))
 	}
-	
+
 	if i.options.Verbose && len(output) > 0 {
 		fmt.Printf("Post-install output:\n%s", string(output))
 	}
-	
+
 	return nil
 }
 
