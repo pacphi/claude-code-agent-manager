@@ -34,7 +34,6 @@ jobs:
       with:
         path: |
           ~/go/pkg/mod
-          ~/.cache/go-build
         key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-${{ matrix.go-version }}-
@@ -94,7 +93,6 @@ jobs:
       with:
         path: |
           ~/go/pkg/mod
-          ~/.cache/go-build
         key: ${{ runner.os }}-go-1.24.x-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-1.24.x-
