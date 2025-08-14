@@ -46,6 +46,7 @@ jobs:
       run: go mod verify
 
     - name: Check formatting
+      if: runner.os != 'Windows'
       run: |
         if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
           echo "The following files are not formatted:"
