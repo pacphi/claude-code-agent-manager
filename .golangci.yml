@@ -1,4 +1,5 @@
 # golangci-lint configuration
+# Version 2 schema - the only valid version for modern golangci-lint
 version: "2"
 
 run:
@@ -7,8 +8,15 @@ run:
   modules-download-mode: readonly
 
 linters:
-  default: standard
   enable:
+    # Default linters (always good to have)
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
     # Additional recommended linters
     - gci
     - gofmt
@@ -41,8 +49,28 @@ linters:
     - goerr113  # Can be overly strict for some codebases
     - wrapcheck # Can be overly verbose
 
+  settings:
+    gocyclo:
+      min-complexity: 15
+
+    nestif:
+      min-complexity: 4
+
+    revive:
+      confidence: 0.8
+
+    gosec:
+      severity: medium
+      confidence: medium
+
+  exclusions:
+    rules:
+      - linters:
+          - gosec
+          - unparam
+          - errcheck
+        path: _test\.go
+
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  # Note: Path-based exclusions are handled differently in v2
-  # Consider using //nolint comments in code or adjusting linter settings
