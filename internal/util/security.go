@@ -32,6 +32,15 @@ func ValidatePath(path string) error {
 		"/proc/",
 		"/sys/",
 		"/dev/",
+		// Windows system paths
+		"c:\\windows\\",
+		"c:\\program files\\",
+		"c:\\program files (x86)\\",
+		"c:\\users\\all users\\",
+		"c:\\documents and settings\\",
+		"\\windows\\",
+		"\\program files\\",
+		"\\program files (x86)\\",
 	}
 
 	cleanPath := filepath.Clean(path)

@@ -45,6 +45,16 @@ func TestValidatePath(t *testing.T) {
 			path:    "/proc/version",
 			wantErr: true,
 		},
+		{
+			name:    "windows system path access attempt",
+			path:    "C:\\Windows\\System32\\config\\sam",
+			wantErr: true,
+		},
+		{
+			name:    "windows program files access attempt",
+			path:    "C:\\Program Files\\sensitive",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

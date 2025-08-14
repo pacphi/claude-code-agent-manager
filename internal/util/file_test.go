@@ -124,6 +124,16 @@ func TestFileManager_Remove(t *testing.T) {
 			path:    "/",
 			wantErr: true,
 		},
+		{
+			name:    "windows system path protection",
+			path:    "C:\\Windows",
+			wantErr: true,
+		},
+		{
+			name:    "windows program files protection",
+			path:    "C:\\Program Files",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
