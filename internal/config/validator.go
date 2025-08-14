@@ -81,6 +81,26 @@ func validateSettings(settings *Settings) error {
 }
 
 func validateSource(source *Source) error {
+	// Validate basic source properties
+	if err := validateSourceBasics(source); err != nil {
+		return err
+	}
+
+	// Type-specific validation
+	if err := validateSourceType(source); err != nil {
+		return err
+	}
+
+	// Validate authentication
+	if err := validateSourceAuth(source); err != nil {
+		return err
+	}
+
+	// Validate other source components
+	return validateSourceComponents(source)
+}
+
+func validateSourceBasics(source *Source) error {
 	// Validate name
 	if source.Name == "" {
 		return fmt.Errorf("source name is required")
@@ -93,7 +113,15 @@ func validateSource(source *Source) error {
 			source.Type, strings.Join(validTypes, ", "))
 	}
 
-	// Type-specific validation
+	// Validate paths
+	if source.Paths.Target == "" {
+		return fmt.Errorf("target path is required")
+	}
+
+	return nil
+}
+
+func validateSourceType(source *Source) error {
 	switch source.Type {
 	case "github":
 		if source.Repository == "" {
@@ -119,27 +147,31 @@ func validateSource(source *Source) error {
 		}
 	}
 
-	// Validate paths
-	if source.Paths.Target == "" {
-		return fmt.Errorf("target path is required")
+	return nil
+}
+
+func validateSourceAuth(source *Source) error {
+	if source.Auth.Method == "" {
+		return nil
 	}
 
-	// Validate auth if present
-	if source.Auth.Method != "" {
-		validMethods := []string{"token", "ssh"}
-		if !contains(validMethods, source.Auth.Method) {
-			return fmt.Errorf("invalid auth method: %s", source.Auth.Method)
-		}
-
-		if source.Auth.Method == "token" && source.Auth.TokenEnv == "" {
-			return fmt.Errorf("token_env is required for token auth")
-		}
-
-		if source.Auth.Method == "ssh" && source.Auth.SSHKey == "" {
-			return fmt.Errorf("ssh_key is required for ssh auth")
-		}
+	validMethods := []string{"token", "ssh"}
+	if !contains(validMethods, source.Auth.Method) {
+		return fmt.Errorf("invalid auth method: %s", source.Auth.Method)
 	}
 
+	if source.Auth.Method == "token" && source.Auth.TokenEnv == "" {
+		return fmt.Errorf("token_env is required for token auth")
+	}
+
+	if source.Auth.Method == "ssh" && source.Auth.SSHKey == "" {
+		return fmt.Errorf("ssh_key is required for ssh auth")
+	}
+
+	return nil
+}
+
+func validateSourceComponents(source *Source) error {
 	// Validate filters
 	if err := validateFilters(&source.Filters); err != nil {
 		return fmt.Errorf("invalid filters: %w", err)

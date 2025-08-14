@@ -35,7 +35,11 @@ func (fm *FileManager) Copy(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() {
+		if closeErr := srcFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close source file: %v\n", closeErr)
+		}
+	}()
 
 	// Get source file info
 	srcInfo, err := srcFile.Stat()
@@ -45,7 +49,7 @@ func (fm *FileManager) Copy(src, dst string) error {
 
 	// Ensure destination directory exists
 	dstDir := filepath.Dir(dst)
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
+	if err := os.MkdirAll(dstDir, 0750); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
@@ -54,7 +58,11 @@ func (fm *FileManager) Copy(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer dstFile.Close()
+	defer func() {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close destination file: %v\n", closeErr)
+		}
+	}()
 
 	// Copy file contents
 	if _, err := io.Copy(dstFile, srcFile); err != nil {

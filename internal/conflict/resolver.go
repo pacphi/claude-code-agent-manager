@@ -49,11 +49,12 @@ func (r *Resolver) Resolve(existingPath, newPath, strategy string) (bool, error)
 
 // resolveWithBackup creates a backup of the existing file
 func (r *Resolver) resolveWithBackup(existingPath, newPath string) (bool, error) {
+	_ = newPath // Not used in backup strategy, kept for interface consistency
 	// Create backup directory if it doesn't exist
 	backupPath := r.getBackupPath(existingPath)
 	backupDir := filepath.Dir(backupPath)
 
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
 		return false, fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -71,7 +72,7 @@ func (r *Resolver) resolveWithMerge(existingPath, newPath string) (bool, error) 
 	backupPath := r.getBackupPath(existingPath)
 	backupDir := filepath.Dir(backupPath)
 
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
 		return false, fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -83,12 +84,14 @@ func (r *Resolver) resolveWithMerge(existingPath, newPath string) (bool, error) 
 	// Now attempt three-way merge
 	mergedContent, err := r.performThreeWayMerge(backupPath, existingPath, newPath)
 	if err != nil {
-		// If merge fails, fall back to backup strategy behavior
+		// If merge fails, fall back to backup strategy behavior (allow overwrite)
+		// This is intentional: we return true to proceed with overwrite after backup
+		//nolint:nilerr // Intentional fallback to backup strategy when merge fails
 		return true, nil
 	}
 
 	// Write merged content to the existing path
-	if err := os.WriteFile(existingPath, mergedContent, 0644); err != nil {
+	if err := os.WriteFile(existingPath, mergedContent, 0600); err != nil {
 		return false, fmt.Errorf("failed to write merged content: %w", err)
 	}
 
@@ -97,24 +100,47 @@ func (r *Resolver) resolveWithMerge(existingPath, newPath string) (bool, error) 
 
 // performThreeWayMerge performs intelligent merge of three file versions
 func (r *Resolver) performThreeWayMerge(originalPath, currentPath, incomingPath string) ([]byte, error) {
+	// Validate paths for security
+	if err := util.ValidatePath(originalPath); err != nil {
+		return nil, fmt.Errorf("invalid original path: %w", err)
+	}
+	if err := util.ValidatePath(currentPath); err != nil {
+		return nil, fmt.Errorf("invalid current path: %w", err)
+	}
+	if err := util.ValidatePath(incomingPath); err != nil {
+		return nil, fmt.Errorf("invalid incoming path: %w", err)
+	}
+
 	// Read the three versions
 	originalFile, err := os.Open(originalPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read original file: %w", err)
 	}
-	defer originalFile.Close()
+	defer func() {
+		if closeErr := originalFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close original file: %v\n", closeErr)
+		}
+	}()
 
 	currentFile, err := os.Open(currentPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read current file: %w", err)
 	}
-	defer currentFile.Close()
+	defer func() {
+		if closeErr := currentFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close current file: %v\n", closeErr)
+		}
+	}()
 
 	incomingFile, err := os.Open(incomingPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read incoming file: %w", err)
 	}
-	defer incomingFile.Close()
+	defer func() {
+		if closeErr := incomingFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close incoming file: %v\n", closeErr)
+		}
+	}()
 
 	// Perform three-way merge using diff3
 	// Parameters: current (a), original (o), incoming (b)
@@ -139,7 +165,7 @@ func (r *Resolver) CreateBackup(sourceName string) error {
 	backupPath := filepath.Join(r.backupDir, backupName)
 
 	// Create backup directory
-	if err := os.MkdirAll(backupPath, 0755); err != nil {
+	if err := os.MkdirAll(backupPath, 0750); err != nil {
 		return fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -147,7 +173,7 @@ func (r *Resolver) CreateBackup(sourceName string) error {
 	metadataPath := filepath.Join(backupPath, ".backup-info")
 	metadata := fmt.Sprintf("Source: %s\nTimestamp: %s\n", sourceName, timestamp)
 
-	if err := os.WriteFile(metadataPath, []byte(metadata), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadata), 0600); err != nil {
 		return fmt.Errorf("failed to write backup metadata: %w", err)
 	}
 
@@ -189,7 +215,7 @@ func (r *Resolver) RestoreBackup(sourceName string) error {
 		restorePath := filepath.Join(".", relPath)
 
 		// Ensure parent directory exists
-		if err := os.MkdirAll(filepath.Dir(restorePath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(restorePath), 0750); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 
@@ -264,7 +290,7 @@ func (r *Resolver) RestoreBackupFiles() error {
 		originalPath := filepath.Join(".claude", "agents", relativePath)
 
 		// Ensure parent directory exists
-		if err := os.MkdirAll(filepath.Dir(originalPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(originalPath), 0750); err != nil {
 			return fmt.Errorf("failed to create directory for %s: %w", originalPath, err)
 		}
 
@@ -344,7 +370,7 @@ func (r *Resolver) RestoreBackupFilesWithTracking() (map[string]bool, error) {
 		originalPath := filepath.Join(".claude", "agents", relativePath)
 
 		// Ensure parent directory exists
-		if err := os.MkdirAll(filepath.Dir(originalPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(originalPath), 0750); err != nil {
 			return restoredFiles, fmt.Errorf("failed to create directory for %s: %w", originalPath, err)
 		}
 

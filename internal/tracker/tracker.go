@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/pacphi/claude-code-agent-manager/internal/util"
 )
 
 // Tracker manages installation tracking
@@ -212,7 +214,7 @@ func (t *Tracker) load() (*TrackingData, error) {
 func (t *Tracker) save(data *TrackingData) error {
 	// Ensure parent directory exists
 	dir := filepath.Dir(t.filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create tracking directory: %w", err)
 	}
 
@@ -224,13 +226,15 @@ func (t *Tracker) save(data *TrackingData) error {
 
 	// Write atomically using temp file
 	tempFile := t.filePath + ".tmp"
-	if err := os.WriteFile(tempFile, content, 0644); err != nil {
+	if err := os.WriteFile(tempFile, content, 0600); err != nil {
 		return fmt.Errorf("failed to write tracking data: %w", err)
 	}
 
 	// Rename temp file to actual file
 	if err := os.Rename(tempFile, t.filePath); err != nil {
-		os.Remove(tempFile) // Clean up temp file
+		if removeErr := os.Remove(tempFile); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file %s: %v\n", tempFile, removeErr)
+		}
 		return fmt.Errorf("failed to save tracking data: %w", err)
 	}
 
@@ -257,7 +261,7 @@ func (t *Tracker) Backup() error {
 	backupPath := fmt.Sprintf("%s.backup.%s", t.filePath, time.Now().Format("20060102-150405"))
 
 	// Write backup
-	if err := os.WriteFile(backupPath, content, 0644); err != nil {
+	if err := os.WriteFile(backupPath, content, 0600); err != nil {
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -266,6 +270,11 @@ func (t *Tracker) Backup() error {
 
 // Restore restores tracking data from a backup
 func (t *Tracker) Restore(backupPath string) error {
+	// Validate path for security
+	if err := util.ValidatePath(backupPath); err != nil {
+		return fmt.Errorf("invalid backup path: %w", err)
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -282,7 +291,7 @@ func (t *Tracker) Restore(backupPath string) error {
 	}
 
 	// Write to tracking file
-	if err := os.WriteFile(t.filePath, content, 0644); err != nil {
+	if err := os.WriteFile(t.filePath, content, 0600); err != nil {
 		return fmt.Errorf("failed to restore backup: %w", err)
 	}
 

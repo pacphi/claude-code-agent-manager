@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/fatih/color"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
@@ -29,7 +28,6 @@ type Installer struct {
 	tracker  *tracker.Tracker
 	resolver *conflict.Resolver
 	options  Options
-	mu       sync.Mutex
 }
 
 // New creates a new installer instance
@@ -102,7 +100,7 @@ func (i *Installer) InstallSource(source config.Source) error {
 
 	// Create target directory if it doesn't exist
 	if !i.options.DryRun {
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
+		if err := os.MkdirAll(targetDir, 0750); err != nil {
 			return fmt.Errorf("failed to create target directory: %w", err)
 		}
 	}
@@ -161,7 +159,7 @@ func (i *Installer) InstallSource(source config.Source) error {
 			}
 
 			// Ensure parent directory exists
-			if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(dstPath), 0750); err != nil {
 				return fmt.Errorf("failed to create directory: %w", err)
 			}
 
@@ -467,16 +465,49 @@ func (i *Installer) copyFile(src, dst string) error {
 	return fm.Copy(src, dst)
 }
 
+// validateScriptArg validates script arguments for security
+func validateScriptArg(arg string) error {
+	// Check for null bytes
+	if strings.Contains(arg, "\x00") {
+		return fmt.Errorf("null byte detected in argument: %s", arg)
+	}
+
+	// Check for command injection patterns
+	injectionPatterns := []string{
+		";", "|", "&", "$(", "`", "&&", "||", ">>", "<<",
+	}
+
+	for _, pattern := range injectionPatterns {
+		if strings.Contains(arg, pattern) {
+			return fmt.Errorf("potential command injection in argument: %s", arg)
+		}
+	}
+
+	return nil
+}
+
 func (i *Installer) runPostInstall(action config.PostInstall) error {
 	if action.Path == "" {
 		return fmt.Errorf("post-install action path is required")
+	}
+
+	// Validate script path for security
+	if err := util.ValidatePath(action.Path); err != nil {
+		return fmt.Errorf("invalid script path: %w", err)
+	}
+
+	// Validate all arguments for security
+	for i, arg := range action.Args {
+		if err := validateScriptArg(arg); err != nil {
+			return fmt.Errorf("invalid argument %d: %w", i, err)
+		}
 	}
 
 	if i.options.Verbose {
 		fmt.Printf("Executing post-install script: %s %v\n", action.Path, action.Args)
 	}
 
-	// Prepare the command
+	// Prepare the command with validated inputs
 	args := append([]string{}, action.Args...)
 	cmd := exec.Command("bash", append([]string{action.Path}, args...)...)
 

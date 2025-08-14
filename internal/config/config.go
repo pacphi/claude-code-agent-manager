@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pacphi/claude-code-agent-manager/internal/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -105,6 +106,11 @@ type Metadata struct {
 
 // Load reads and parses the configuration file
 func Load(path string) (*Config, error) {
+	// Validate path for security
+	if err := util.ValidatePath(path); err != nil {
+		return nil, fmt.Errorf("invalid config path: %w", err)
+	}
+
 	// Check if file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, fmt.Errorf("configuration file not found: %s", path)
@@ -227,7 +233,7 @@ func Save(cfg *Config, path string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

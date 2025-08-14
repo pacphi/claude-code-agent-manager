@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
@@ -371,21 +370,4 @@ func runValidate() error {
 	}
 
 	return nil
-}
-
-// Helper function to resolve path
-func resolvePath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-
-	// Expand ~ to home directory
-	if len(path) > 0 && path[0] == '~' {
-		home, _ := os.UserHomeDir()
-		return filepath.Join(home, path[1:])
-	}
-
-	// Make relative to current directory
-	pwd, _ := os.Getwd()
-	return filepath.Join(pwd, path)
 }

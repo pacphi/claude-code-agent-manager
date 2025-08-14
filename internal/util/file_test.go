@@ -235,12 +235,13 @@ func TestExpandPath(t *testing.T) {
 
 			// If expansion should succeed, verify result
 			if !tt.wantErr {
-				if tt.path == "~/test" {
+				switch tt.path {
+				case "~/test":
 					// Should be expanded to absolute path
 					if !filepath.IsAbs(result) {
 						t.Errorf("ExpandPath() should return absolute path for ~/test, got %s", result)
 					}
-				} else if tt.path == "/tmp/test" {
+				case "/tmp/test":
 					// Should remain unchanged
 					if result != tt.path {
 						t.Errorf("ExpandPath() should not change absolute path, got %s, want %s", result, tt.path)

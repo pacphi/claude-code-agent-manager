@@ -300,34 +300,21 @@ func (i *Installer) applyFilters(basePath string, filters config.FilterConfig) (
 
 func shouldInclude(relPath, fileName string, filters config.FilterConfig) bool {
 	// Check exclude patterns first
-	for _, pattern := range filters.Exclude.Patterns {
-		if matched, err := filepath.Match(pattern, fileName); err == nil && matched {
-			return false
-		}
-		if matched, err := filepath.Match(pattern, relPath); err == nil && matched {
-			return false
-		}
+	if isExcluded(relPath, fileName, filters.Exclude.Patterns) {
+		return false
 	}
 
 	// If no include filters, include everything not excluded
-	if len(filters.Include.Extensions) == 0 &&
-		len(filters.Include.Patterns) == 0 &&
-		len(filters.Include.Regex) == 0 {
+	if hasNoIncludeFilters(filters) {
 		return true
 	}
 
-	// Check extensions
-	if len(filters.Include.Extensions) > 0 {
-		ext := filepath.Ext(fileName)
-		for _, allowedExt := range filters.Include.Extensions {
-			if ext == allowedExt {
-				return true
-			}
-		}
-	}
+	// Check if file matches any include criteria
+	return matchesIncludeCriteria(relPath, fileName, filters)
+}
 
-	// Check patterns
-	for _, pattern := range filters.Include.Patterns {
+func isExcluded(relPath, fileName string, excludePatterns []string) bool {
+	for _, pattern := range excludePatterns {
 		if matched, err := filepath.Match(pattern, fileName); err == nil && matched {
 			return true
 		}
@@ -335,9 +322,62 @@ func shouldInclude(relPath, fileName string, filters config.FilterConfig) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func hasNoIncludeFilters(filters config.FilterConfig) bool {
+	return len(filters.Include.Extensions) == 0 &&
+		len(filters.Include.Patterns) == 0 &&
+		len(filters.Include.Regex) == 0
+}
+
+func matchesIncludeCriteria(relPath, fileName string, filters config.FilterConfig) bool {
+	// Check extensions
+	if matchesIncludeExtensions(fileName, filters.Include.Extensions) {
+		return true
+	}
+
+	// Check patterns
+	if matchesIncludePatterns(relPath, fileName, filters.Include.Patterns) {
+		return true
+	}
 
 	// Check regex
-	for _, regexStr := range filters.Include.Regex {
+	if matchesIncludeRegex(relPath, filters.Include.Regex) {
+		return true
+	}
+
+	return false
+}
+
+func matchesIncludeExtensions(fileName string, extensions []string) bool {
+	if len(extensions) == 0 {
+		return false
+	}
+
+	ext := filepath.Ext(fileName)
+	for _, allowedExt := range extensions {
+		if ext == allowedExt {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesIncludePatterns(relPath, fileName string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if matched, err := filepath.Match(pattern, fileName); err == nil && matched {
+			return true
+		}
+		if matched, err := filepath.Match(pattern, relPath); err == nil && matched {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesIncludeRegex(relPath string, regexPatterns []string) bool {
+	for _, regexStr := range regexPatterns {
 		re, err := regexp.Compile(regexStr)
 		if err != nil {
 			continue
@@ -346,7 +386,6 @@ func shouldInclude(relPath, fileName string, filters config.FilterConfig) bool {
 			return true
 		}
 	}
-
 	return false
 }
 

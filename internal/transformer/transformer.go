@@ -47,6 +47,7 @@ func (t *Transformer) Apply(files []string, transform config.Transformation, sou
 
 // removeNumericPrefix removes numeric prefixes from directory names
 func (t *Transformer) removeNumericPrefix(files []string, transform config.Transformation, sourcePath, targetPath string) ([]string, error) {
+	_ = targetPath // Not used in this transformation, kept for interface consistency
 	pattern := transform.Pattern
 	if pattern == "" {
 		pattern = "^[0-9]{2}-"
@@ -99,6 +100,7 @@ func (t *Transformer) removeNumericPrefix(files []string, transform config.Trans
 
 // extractDocs extracts documentation files to a separate directory
 func (t *Transformer) extractDocs(files []string, transform config.Transformation, sourcePath, targetPath string) ([]string, error) {
+	_ = targetPath // Not used in this transformation, kept for interface consistency
 	sourcePattern := transform.SourcePattern
 	if sourcePattern == "" {
 		sourcePattern = "*/README.md"
@@ -116,12 +118,11 @@ func (t *Transformer) extractDocs(files []string, transform config.Transformatio
 		docsPath = filepath.Join(pwd, docsPath)
 	}
 
-	if err := os.MkdirAll(docsPath, 0755); err != nil {
+	if err := os.MkdirAll(docsPath, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create docs directory: %w", err)
 	}
 
 	result := []string{}
-	extracted := []string{}
 
 	for _, file := range files {
 		matched, _ := filepath.Match(sourcePattern, file)
@@ -140,7 +141,7 @@ func (t *Transformer) extractDocs(files []string, transform config.Transformatio
 				return nil, fmt.Errorf("failed to extract doc %s: %w", file, err)
 			}
 
-			extracted = append(extracted, docPath)
+			// Note: extracted doc is written directly to project root
 		} else {
 			result = append(result, file)
 		}
@@ -195,14 +196,56 @@ func (t *Transformer) replaceContent(files []string, transform config.Transforma
 	return files, nil
 }
 
+// validateTransformArg validates transformation script arguments for security
+func validateTransformArg(arg string) error {
+	// Check for null bytes
+	if strings.Contains(arg, "\x00") {
+		return fmt.Errorf("null byte detected in argument: %s", arg)
+	}
+
+	// Check for command injection patterns
+	injectionPatterns := []string{
+		";", "|", "&", "$(", "`", "&&", "||", ">>", "<<",
+	}
+
+	for _, pattern := range injectionPatterns {
+		if strings.Contains(arg, pattern) {
+			return fmt.Errorf("potential command injection in argument: %s", arg)
+		}
+	}
+
+	return nil
+}
+
 // runCustomScript runs a custom transformation script
 func (t *Transformer) runCustomScript(files []string, transform config.Transformation, sourcePath, targetPath string) ([]string, error) {
 	if transform.Script == "" {
 		return nil, fmt.Errorf("script path is required for custom_script transformation")
 	}
 
+	// Validate script path for security
+	if err := util.ValidatePath(transform.Script); err != nil {
+		return nil, fmt.Errorf("invalid script path: %w", err)
+	}
+
+	// Validate paths for security
+	if err := util.ValidatePath(sourcePath); err != nil {
+		return nil, fmt.Errorf("invalid source path: %w", err)
+	}
+	if err := util.ValidatePath(targetPath); err != nil {
+		return nil, fmt.Errorf("invalid target path: %w", err)
+	}
+
 	// Prepare arguments
 	args := append([]string{}, transform.Args...)
+
+	// Validate all arguments for security
+	for i, arg := range args {
+		if err := validateTransformArg(arg); err != nil {
+			return nil, fmt.Errorf("invalid argument %d: %w", i, err)
+		}
+	}
+
 	args = append(args, sourcePath, targetPath)
 
 	// Run the script
