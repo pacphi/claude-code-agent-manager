@@ -178,13 +178,13 @@ func (wp *WorkerPool) worker() {
 
 func (wp *WorkerPool) Shutdown(timeout time.Duration) error {
     close(wp.jobs)
-    
+
     done := make(chan struct{})
     go func() {
         wp.wg.Wait()
         close(done)
     }()
-    
+
     select {
     case <-done:
         wp.cancel()
@@ -215,7 +215,7 @@ func NewHTTPServer(addr string, handler http.Handler) *http.Server {
         Level: slog.LevelInfo,
         AddSource: true,
     }))
-    
+
     server := &http.Server{
         Addr:         addr,
         Handler:      loggingMiddleware(logger)(handler),
@@ -223,7 +223,7 @@ func NewHTTPServer(addr string, handler http.Handler) *http.Server {
         WriteTimeout: 10 * time.Second,
         IdleTimeout:  120 * time.Second,
     }
-    
+
     return server
 }
 
@@ -232,9 +232,9 @@ func loggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             start := time.Now()
             wrapper := &responseWrapper{ResponseWriter: w, statusCode: http.StatusOK}
-            
+
             next.ServeHTTP(wrapper, r)
-            
+
             logger.Info("HTTP request",
                 slog.String("method", r.Method),
                 slog.String("path", r.URL.Path),
@@ -297,13 +297,13 @@ func AuthMiddleware(tokenValidator func(string) (string, error)) Middleware {
                 http.Error(w, "Missing authorization header", http.StatusUnauthorized)
                 return
             }
-            
+
             userID, err := tokenValidator(token)
             if err != nil {
                 http.Error(w, "Invalid token", http.StatusUnauthorized)
                 return
             }
-            
+
             ctx := context.WithValue(r.Context(), UserIDKey, userID)
             next.ServeHTTP(w, r.WithContext(ctx))
         })
@@ -341,24 +341,24 @@ func (s *Service) ProcessWithContext(ctx context.Context, req *Request) (*Respon
     // Create child context with timeout
     ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
     defer cancel()
-    
+
     // Check for early cancellation
     select {
     case <-ctx.Done():
         return nil, ctx.Err()
     default:
     }
-    
+
     // Process with context-aware operations
     result, err := s.processStep1(ctx, req)
     if err != nil {
         return nil, fmt.Errorf("step 1 failed: %w", err)
     }
-    
+
     // Multiple operations with context checking
     results := make(chan *PartialResult, 3)
     errs := make(chan error, 3)
-    
+
     for i := 0; i < 3; i++ {
         go func(i int) {
             select {
@@ -367,7 +367,7 @@ func (s *Service) ProcessWithContext(ctx context.Context, req *Request) (*Respon
                 return
             default:
             }
-            
+
             partial, err := s.processStep2(ctx, result, i)
             if err != nil {
                 errs <- err
@@ -376,7 +376,7 @@ func (s *Service) ProcessWithContext(ctx context.Context, req *Request) (*Respon
             results <- partial
         }(i)
     }
-    
+
     // Collect results with context awareness
     var partials []*PartialResult
     for i := 0; i < 3; i++ {
@@ -389,7 +389,7 @@ func (s *Service) ProcessWithContext(ctx context.Context, req *Request) (*Respon
             return nil, ctx.Err()
         }
     }
-    
+
     return s.combineResults(partials), nil
 }
 ```
@@ -437,7 +437,7 @@ func (e *ServiceError) Unwrap() error {
 // Enhanced error aggregation using errors.Join
 func ValidateRequest(req *Request) error {
     var errs []error
-    
+
     if req.Name == "" {
         errs = append(errs, &ValidationError{
             Field:   "name",
@@ -445,7 +445,7 @@ func ValidateRequest(req *Request) error {
             Message: "name is required",
         })
     }
-    
+
     if req.Email == "" {
         errs = append(errs, &ValidationError{
             Field:   "email",
@@ -459,11 +459,11 @@ func ValidateRequest(req *Request) error {
             Message: "email format is invalid",
         })
     }
-    
+
     if len(errs) > 0 {
         return errors.Join(errs...)
     }
-    
+
     return nil
 }
 
@@ -471,26 +471,26 @@ func ValidateRequest(req *Request) error {
 func (c *Client) CallWithRetry(ctx context.Context, req *Request) (*Response, error) {
     const maxRetries = 3
     var lastErr error
-    
+
     for i := 0; i < maxRetries; i++ {
         select {
         case <-ctx.Done():
             return nil, ctx.Err()
         default:
         }
-        
+
         resp, err := c.call(ctx, req)
         if err == nil {
             return resp, nil
         }
-        
+
         lastErr = err
-        
+
         // Check if error is retryable
         if !isRetryableError(err) {
             break
         }
-        
+
         // Exponential backoff
         backoff := time.Duration(1<<uint(i)) * time.Second
         select {
@@ -499,7 +499,7 @@ func (c *Client) CallWithRetry(ctx context.Context, req *Request) (*Response, er
             return nil, ctx.Err()
         }
     }
-    
+
     return nil, fmt.Errorf("failed after %d retries: %w", maxRetries, lastErr)
 }
 ```
@@ -571,23 +571,23 @@ func TestUserService(t *testing.T) {
             wantErr: true,
         },
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             ctrl := gomock.NewController(t)
             defer ctrl.Finish()
-            
+
             mockRepo := NewMockUserRepo(ctrl)
             tt.mockSetup(mockRepo)
-            
+
             service := NewUserService(mockRepo)
             got, err := service.CreateUser(context.Background(), tt.input)
-            
+
             if (err != nil) != tt.wantErr {
                 t.Errorf("CreateUser() error = %v, wantErr %v", err, tt.wantErr)
                 return
             }
-            
+
             if !reflect.DeepEqual(got, tt.want) {
                 t.Errorf("CreateUser() = %v, want %v", got, tt.want)
             }
@@ -599,10 +599,10 @@ func TestUserService(t *testing.T) {
 func BenchmarkUserService_CreateUser(b *testing.B) {
     service := setupBenchmarkService()
     req := &CreateUserRequest{Name: "Bench User", Email: "bench@example.com"}
-    
+
     b.ResetTimer()
     b.ReportAllocs()
-    
+
     for i := 0; i < b.N; i++ {
         _, _ = service.CreateUser(context.Background(), req)
     }
@@ -614,7 +614,7 @@ func FuzzValidateEmail(f *testing.F) {
     f.Add("user@example.com")
     f.Add("invalid-email")
     f.Add("")
-    
+
     f.Fuzz(func(t *testing.T, email string) {
         result := validateEmail(email)
         // Property: result should never panic
@@ -722,11 +722,11 @@ func NewServer(opts ...ServerOption) *http.Server {
         Host:    "localhost",
         Timeout: 30 * time.Second,
     }
-    
+
     for _, opt := range opts {
         opt(config)
     }
-    
+
     return &http.Server{
         Addr:         fmt.Sprintf("%s:%d", config.Host, config.Port),
         ReadTimeout:  config.Timeout,
