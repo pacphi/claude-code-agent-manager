@@ -169,7 +169,7 @@ func (r *Resolver) RestoreBackup(sourceName string) error {
 	}
 
 	// Restore files from backup
-	return filepath.Walk(backupDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(backupDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -200,6 +200,10 @@ func (r *Resolver) RestoreBackup(sourceName string) error {
 
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("failed to restore from backup %s: %w", backupDir, err)
+	}
+	return nil
 }
 
 // RestoreBackupFiles restores files from flat file backups
@@ -589,12 +593,15 @@ func (r *Resolver) ListBackups() ([]BackupInfo, error) {
 				// Calculate backup size
 				var size int64
 				backupPath := filepath.Join(r.backupDir, name)
-				filepath.Walk(backupPath, func(path string, info os.FileInfo, err error) error {
+				if walkErr := filepath.Walk(backupPath, func(path string, info os.FileInfo, err error) error {
 					if err == nil && !info.IsDir() {
 						size += info.Size()
 					}
 					return nil
-				})
+				}); walkErr != nil {
+					// Log error but continue with size calculation
+					fmt.Printf("Warning: failed to calculate size for backup %s: %v\n", name, walkErr)
+				}
 
 				backups = append(backups, BackupInfo{
 					Source:    sourceName,

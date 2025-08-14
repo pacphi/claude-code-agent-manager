@@ -138,7 +138,10 @@ func substituteVariables(data []byte) []byte {
 	var tempCfg struct {
 		Settings map[string]interface{} `yaml:"settings"`
 	}
-	yaml.Unmarshal(data, &tempCfg)
+	if err := yaml.Unmarshal(data, &tempCfg); err != nil {
+		// Log error but continue without variable substitution
+		fmt.Printf("Warning: failed to parse settings for variable substitution: %v\n", err)
+	}
 
 	// Replace ${settings.*} variables
 	if tempCfg.Settings != nil {

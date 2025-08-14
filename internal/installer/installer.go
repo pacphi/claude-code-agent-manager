@@ -53,7 +53,14 @@ func (i *Installer) InstallSource(source config.Source) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			// Log error but don't fail the entire operation
+			if i.options.Verbose {
+				fmt.Printf("Warning: failed to remove temp directory %s: %v\n", tempDir, err)
+			}
+		}
+	}()
 
 	// Get source handler based on type
 	handler, err := i.getSourceHandler(source.Type)
@@ -308,7 +315,9 @@ func (i *Installer) UninstallSource(sourceName string) error {
 
 	// Clean up backups unless keeping them
 	if !i.options.KeepBackups && !i.options.DryRun && i.resolver != nil {
-		i.resolver.CleanupBackups(sourceName)
+		if err := i.resolver.CleanupBackups(sourceName); err != nil {
+			color.Yellow("Warning: failed to cleanup backups: %v", err)
+		}
 	}
 
 	color.Green("✓ Uninstalled source: %s\n", sourceName)
@@ -383,7 +392,9 @@ func (i *Installer) UpdateSource(sourceName string) error {
 	color.Blue("Updating %s...\n", sourceName)
 
 	// Backup current installation
-	i.resolver.CreateBackup(sourceName)
+	if err := i.resolver.CreateBackup(sourceName); err != nil {
+		return fmt.Errorf("failed to create backup: %w", err)
+	}
 
 	// Uninstall current version
 	if err := i.UninstallSource(sourceName); err != nil {
@@ -393,7 +404,9 @@ func (i *Installer) UpdateSource(sourceName string) error {
 	// Install new version
 	if err := i.InstallSource(*source); err != nil {
 		// Restore backup on failure
-		i.resolver.RestoreBackup(sourceName)
+		if restoreErr := i.resolver.RestoreBackup(sourceName); restoreErr != nil {
+			color.Yellow("Warning: failed to restore backup after installation failure: %v", restoreErr)
+		}
 		return fmt.Errorf("failed to install update: %w", err)
 	}
 

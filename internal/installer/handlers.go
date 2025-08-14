@@ -124,7 +124,12 @@ func (g *GitHubHandler) CheckUpdate(source config.Source, currentCommit string) 
 	if err != nil {
 		return false, "", err
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			// Log error but don't fail the entire operation
+			fmt.Printf("Warning: failed to remove temp directory %s: %v\n", tempDir, err)
+		}
+	}()
 
 	// Fetch latest
 	_, latestCommit, err := g.Fetch(source, tempDir)
@@ -196,7 +201,12 @@ func (g *GitHandler) CheckUpdate(source config.Source, currentCommit string) (bo
 	if err != nil {
 		return false, "", err
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			// Log error but don't fail the entire operation
+			fmt.Printf("Warning: failed to remove temp directory %s: %v\n", tempDir, err)
+		}
+	}()
 
 	// Fetch latest
 	_, latestCommit, err := g.Fetch(source, tempDir)
@@ -281,8 +291,11 @@ func (i *Installer) applyFilters(basePath string, filters config.FilterConfig) (
 
 		return nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk directory %s: %w", basePath, err)
+	}
 
-	return result, err
+	return result, nil
 }
 
 func shouldInclude(relPath, fileName string, filters config.FilterConfig) bool {

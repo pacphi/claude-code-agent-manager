@@ -6,7 +6,7 @@ This guide covers how to build, install, and develop Agent Manager.
 
 ### Required Tools
 
-- **Go 1.21 or later**: Download from [golang.org](https://golang.org/dl/)
+- **Go 1.23 or later**: Download from [golang.org](https://golang.org/dl/)
 - **Git**: For version control and cloning repositories
 - **Make** (optional): For convenient build commands
 
