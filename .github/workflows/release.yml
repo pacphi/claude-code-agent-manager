@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.24.x
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-1.24.x-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-1.24.x-
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test ./...
+
+    - name: Cross-compile binaries
+      run: make cross-compile
+
+    - name: Generate checksums
+      run: |
+        cd bin
+        sha256sum * > SHA256SUMS
+        cat SHA256SUMS
+
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          # Extract changelog for this version if it exists
+          awk '/^## \[${{ steps.get_version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > /tmp/changelog.txt
+          if [ -s /tmp/changelog.txt ]; then
+            echo "CHANGELOG_FILE=/tmp/changelog.txt" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+        # Fallback: generate from git commits
+        if [ ! -f /tmp/changelog.txt ] || [ ! -s /tmp/changelog.txt ]; then
+          echo "### Changes" > /tmp/git_changelog.txt
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> /tmp/git_changelog.txt
+          echo "CHANGELOG_FILE=/tmp/git_changelog.txt" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Release ${{ steps.get_version.outputs.VERSION }}
+        body_path: ${{ steps.changelog.outputs.CHANGELOG_FILE }}
+        files: |
+          bin/agent-manager-darwin-amd64
+          bin/agent-manager-darwin-arm64
+          bin/agent-manager-linux-amd64
+          bin/agent-manager-linux-arm64
+          bin/agent-manager-windows-amd64.exe
+          bin/SHA256SUMS
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.VERSION, '-') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifacts for debugging
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-artifacts-${{ steps.get_version.outputs.VERSION }}
+        path: bin/
+        retention-days: 30

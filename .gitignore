@@ -1,0 +1,172 @@
+# Go Build Artifacts
+# Compiled binaries and build output
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Test and Coverage
+# Test binary, coverage reports
+coverage.out
+coverage.html
+*.cover
+*.coverprofile
+coverage.txt
+test-results/
+benchmark-results/
+
+# Dependency directories
+# vendor/ is typically excluded but can be committed if needed
+vendor/
+
+# IDE and Editor Files
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (GoLand, IntelliJ)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Vim
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+Session.vim
+.netrwhist
+tags
+
+# Emacs
+*~
+\#*\#
+.\#*
+.emacs.desktop
+.emacs.desktop.lock
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Operating System Files
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Project-Specific
+# Release and distribution directories
+releases/
+dist/
+build/
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+.cache/
+
+# Environment and Configuration
+# Local environment files - DO NOT commit secrets!
+.env
+.env.local
+.env.*.local
+*.env
+!example.env
+
+# Security - Never commit private keys or certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+private/
+secrets/
+
+# Go profiling files
+*.prof
+*.pprof
+cpu.prof
+mem.prof
+
+# Goreleaser
+dist/
+.goreleaser.yml.bak
+
+# Debug files
+debug
+debug.test
+*.debug
+
+# Archives (usually build artifacts)
+*.tar.gz
+*.zip
+*.tar.bz2
+*.rar
+*.7z
+
+# Utility artifacts
+backups/
+.installed-agents.json
+
+# NOTE: go.sum is intentionally NOT ignored
+# go.sum should be committed for reproducible builds
+# It contains cryptographic hashes of all dependencies

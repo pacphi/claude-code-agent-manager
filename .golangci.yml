@@ -1,0 +1,48 @@
+# golangci-lint configuration
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  enable:
+    # Additional recommended linters
+    - gci
+    - gofmt
+    - goimports
+    - gosec
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+
+    # Performance linters
+    - prealloc
+
+    # Style linters
+    - gofumpt
+    - nolintlint
+
+    # Bug detection
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+    - nilerr
+
+    # Complexity
+    - gocyclo
+    - nestif
+
+  disable:
+    - goerr113  # Can be overly strict for some codebases
+    - wrapcheck # Can be overly verbose
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  # Note: Path-based exclusions are handled differently in v2
+  # Consider using //nolint comments in code or adjusting linter settings

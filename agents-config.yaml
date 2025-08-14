@@ -1,0 +1,85 @@
+version: "1.0"
+
+settings:
+  base_dir: .claude/agents
+  docs_dir: docs
+  conflict_strategy: backup  # Options: backup, overwrite, skip, merge
+  backup_dir: .claude/backups
+  log_level: info  # Options: debug, info, warn, error
+  concurrent_downloads: 3
+  timeout: 300s
+  continue_on_error: false
+
+sources:
+  - name: awesome-claude-code-subagents
+    enabled: true
+    type: github
+    repository: VoltAgent/awesome-claude-code-subagents
+    branch: main
+    paths:
+      source: categories
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+    transformations:
+      - type: remove_numeric_prefix
+        pattern: "^[0-9]{2}-"
+      - type: extract_docs
+        source_pattern: "*/README.md"
+        target_dir: ${settings.docs_dir}/voltagent
+        naming: UPPERCASE_UNDERSCORE  # e.g., CORE_DEVELOPMENT.md
+    post_install:
+      - type: script
+        path: scripts/post-install/voltagent-fix-doc-links.sh
+
+  - name: 610-claude-subagents
+    enabled: false
+    type: github
+    repository: ChrisRoyse/610ClaudeSubAgents
+    branch: main
+    paths:
+      source: agents
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+      exclude:
+        patterns: ["CLAUDE.md","README.md","MIGRATION_SUMMARY.md"]
+
+  # Example: Custom agents from another repository
+  # - name: custom-agents
+  #   enabled: false
+  #   type: git
+  #   url: https://github.com/example/custom-agents.git
+  #   branch: main
+  #   auth:
+  #     method: token  # Options: token, ssh
+  #     token_env: GITHUB_TOKEN  # Read token from environment variable
+  #   paths:
+  #     source: agents
+  #     target: ${settings.base_dir}/custom
+  #   filters:
+  #     include:
+  #       regex: ["^(ai|ml|data).*\\.md$"]
+  #   transformations:
+  #     - type: custom_script
+  #       script: scripts/transform-custom.sh
+  #       args: ["--format", "markdown"]
+
+  # Example: Local development agents
+  # - name: local-dev-agents
+  #   enabled: false
+  #   type: local
+  #   paths:
+  #     source: ~/my-local-agents
+  #     target: ${settings.base_dir}/local
+  #   filters:
+  #     include:
+  #       extensions: [".md", ".yaml"]
+  #   watch: true  # Watch for changes in development mode
+
+metadata:
+  tracking_file: .claude/.installed-agents.json
+  log_file: .claude/installation.log
+  lock_file: .claude/.lock

@@ -1,0 +1,19 @@
+# CODEOWNERS file for automatic review assignment
+# This file defines who is responsible for code in this repository
+
+# Default owners for everything in the repo
+* @maintainers
+
+# Go source files
+*.go @maintainers
+
+# Configuration files
+*.yml @maintainers
+*.yaml @maintainers
+
+# Documentation
+*.md @maintainers
+docs/ @maintainers
+
+# CI/CD workflows
+.github/workflows/ @maintainers

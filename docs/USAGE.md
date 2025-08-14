@@ -1,0 +1,518 @@
+# Agent Manager Usage Guide
+
+This guide provides detailed instructions on how to use Agent Manager for managing Claude Code agents.
+
+## Command Overview
+
+Agent Manager provides several commands for managing your agents:
+
+```bash
+agent-manager [command] [options]
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `install` | Install agents from configured sources |
+| `uninstall` | Remove installed agents |
+| `update` | Update existing installations |
+| `list` | List installed agents |
+| `validate` | Validate configuration file |
+| `version` | Show version information |
+
+### Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--config, -c` | Configuration file (default: agents-config.yaml) |
+| `--verbose, -v` | Verbose output |
+| `--dry-run` | Simulate actions without making changes |
+| `--no-color` | Disable colored output |
+
+## Installation Commands
+
+### Install All Enabled Sources
+
+Install agents from all enabled sources in your configuration:
+
+```bash
+agent-manager install
+```
+
+### Install Specific Source
+
+Install agents from a specific source only:
+
+```bash
+agent-manager install --source awesome-claude-code-subagents
+```
+
+### Dry Run Installation
+
+Preview what would be installed without making changes:
+
+```bash
+agent-manager install --dry-run
+```
+
+### Verbose Installation
+
+See detailed output during installation:
+
+```bash
+agent-manager install --verbose
+```
+
+## Uninstall Commands
+
+### Uninstall Specific Source
+
+Remove agents from a specific source:
+
+```bash
+agent-manager uninstall --source awesome-claude-code-subagents
+```
+
+### Uninstall All Sources
+
+Remove all installed agents:
+
+```bash
+agent-manager uninstall --all
+```
+
+### Keep Backups During Uninstall
+
+Preserve backup files when uninstalling:
+
+```bash
+agent-manager uninstall --source my-agents --keep-backups
+```
+
+## Update Commands
+
+### Update All Sources
+
+Check for and apply updates to all installed sources:
+
+```bash
+agent-manager update
+```
+
+### Update Specific Source
+
+Update a specific source only:
+
+```bash
+agent-manager update --source awesome-claude-code-subagents
+```
+
+### Check for Updates Only
+
+See what updates are available without applying them:
+
+```bash
+agent-manager update --check-only
+```
+
+## List Commands
+
+### List All Installed Agents
+
+Show all installed agents:
+
+```bash
+agent-manager list
+```
+
+### List Agents from Specific Source
+
+Show agents from a specific source:
+
+```bash
+agent-manager list --source awesome-claude-code-subagents
+```
+
+### Verbose Listing
+
+Show detailed information about installations:
+
+```bash
+agent-manager list --verbose
+```
+
+## Configuration Validation
+
+### Validate Current Configuration
+
+Check if your configuration file is valid:
+
+```bash
+agent-manager validate
+```
+
+### Validate Custom Configuration
+
+Validate a different configuration file:
+
+```bash
+agent-manager validate --config my-config.yaml
+```
+
+### Verbose Validation
+
+Show detailed validation information and warnings:
+
+```bash
+agent-manager validate --verbose
+```
+
+## Common Workflows
+
+### Initial Setup
+
+1. **Create your configuration**:
+
+   ```bash
+   # Start with the default configuration
+   cp agents-config.yaml my-config.yaml
+   # Edit my-config.yaml to suit your needs
+   ```
+
+2. **Validate your configuration**:
+
+   ```bash
+   agent-manager validate --config my-config.yaml
+   ```
+
+3. **Perform a dry run**:
+
+   ```bash
+   agent-manager install --config my-config.yaml --dry-run
+   ```
+
+4. **Install agents**:
+
+   ```bash
+   agent-manager install --config my-config.yaml
+   ```
+
+### Daily Operations
+
+**Check what's installed**:
+
+```bash
+agent-manager list
+```
+
+**Update everything**:
+
+```bash
+agent-manager update
+```
+
+**Add a new source**:
+
+1. Edit your configuration file
+2. Validate: `agent-manager validate`
+3. Install: `agent-manager install --source new-source-name`
+
+### Troubleshooting
+
+**Check for configuration issues**:
+
+```bash
+agent-manager validate --verbose
+```
+
+**See what would happen**:
+
+```bash
+agent-manager install --dry-run --verbose
+```
+
+**Reinstall problematic source**:
+
+```bash
+agent-manager uninstall --source problem-source
+agent-manager install --source problem-source --verbose
+```
+
+## Working with Different Sources
+
+### GitHub Repositories
+
+Basic GitHub source:
+
+```yaml
+- name: my-github-agents
+  type: github
+  repository: owner/repo-name
+  branch: main
+```
+
+With authentication:
+
+```yaml
+- name: private-agents
+  type: github
+  repository: company/private-agents
+  auth:
+    method: token
+    token_env: GITHUB_TOKEN
+```
+
+### Git Repositories
+
+HTTPS repository:
+
+```yaml
+- name: git-agents
+  type: git
+  url: https://gitlab.com/user/agents.git
+  branch: develop
+```
+
+SSH repository:
+
+```yaml
+- name: ssh-agents
+  type: git
+  url: git@gitlab.com:user/agents.git
+  auth:
+    method: ssh
+    ssh_key: ~/.ssh/id_rsa
+```
+
+### Local Sources
+
+Local development:
+
+```yaml
+- name: local-agents
+  type: local
+  paths:
+    source: ~/my-local-agents
+    target: .claude/agents/local
+  watch: true
+```
+
+## Conflict Resolution
+
+When files already exist, Agent Manager uses conflict resolution strategies:
+
+### Backup Strategy (Default)
+
+Creates timestamped backups before overwriting:
+
+```bash
+# Files are backed up to .claude/backups/
+original-file.md -> original-file.md.20240113-150405
+```
+
+### Override Strategy
+
+Force overwrite existing files:
+
+```yaml
+settings:
+  conflict_strategy: overwrite
+```
+
+### Skip Strategy
+
+Keep existing files, skip new ones:
+
+```yaml
+sources:
+  - name: my-source
+    conflict_strategy: skip
+```
+
+### Merge Strategy
+
+Attempt to merge content (currently same as backup):
+
+```yaml
+settings:
+  conflict_strategy: merge
+```
+
+## File Filtering
+
+Control which files are installed using filters:
+
+### Include by Extension
+
+```yaml
+filters:
+  include:
+    extensions: [".md", ".yaml"]
+```
+
+### Include by Pattern
+
+```yaml
+filters:
+  include:
+    patterns: ["*-agent/*", "docs/*"]
+```
+
+### Include by Regex
+
+```yaml
+filters:
+  include:
+    regex: ["^(core|data).*\\.md$"]
+```
+
+### Exclude Patterns
+
+```yaml
+filters:
+  exclude:
+    patterns: ["test-*", "*.tmp", ".*"]
+```
+
+## Transformations
+
+Transform files during installation:
+
+### Remove Numeric Prefixes
+
+```yaml
+transformations:
+  - type: remove_numeric_prefix
+    pattern: "^[0-9]{2}-"
+```
+
+### Extract Documentation
+
+```yaml
+transformations:
+  - type: extract_docs
+    source_pattern: "*/README.md"
+    target_dir: docs
+    naming: UPPERCASE_UNDERSCORE
+```
+
+### Custom Scripts
+
+```yaml
+transformations:
+  - type: custom_script
+    script: ./transform-agents.sh
+    args: ["--format", "claude"]
+```
+
+## Environment Variables
+
+Customize behavior with environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENT_MANAGER_CONFIG` | Default config file | agents-config.yaml |
+| `AGENT_MANAGER_LOG_LEVEL` | Log level | info |
+| `NO_COLOR` | Disable colored output | - |
+| `GITHUB_TOKEN` | GitHub API token | - |
+
+Example:
+
+```bash
+export AGENT_MANAGER_LOG_LEVEL=debug
+export GITHUB_TOKEN=ghp_your_token_here
+agent-manager install
+```
+
+## Exit Codes
+
+Agent Manager uses standard exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Configuration error |
+| 3 | Installation error |
+| 4 | Network error |
+
+## Advanced Usage
+
+### Batch Operations
+
+Install multiple specific sources:
+
+```bash
+for source in core-agents data-agents; do
+    agent-manager install --source $source
+done
+```
+
+### Configuration Templates
+
+Use environment variable substitution:
+
+```yaml
+sources:
+  - name: ${COMPANY}-agents
+    repository: ${GITHUB_ORG}/claude-agents
+    auth:
+      token_env: ${TOKEN_VAR}
+```
+
+### Monitoring Installations
+
+Track installation progress:
+
+```bash
+# Terminal 1: Run installation
+agent-manager install --verbose
+
+# Terminal 2: Monitor tracking file
+watch -n 1 cat .claude/.installed-agents.json
+```
+
+## Best Practices
+
+1. **Always validate before installing**:
+
+   ```bash
+   agent-manager validate && agent-manager install
+   ```
+
+2. **Use dry-run for new configurations**:
+
+   ```bash
+   agent-manager install --dry-run --verbose
+   ```
+
+3. **Keep backups enabled** (default behavior)
+
+4. **Use version control for your configuration files**
+
+5. **Test with local sources first** when developing new agents
+
+6. **Use meaningful source names** for easier management
+
+7. **Document your custom transformations** and post-install scripts
+
+8. **Regularly update your agents**:
+
+   ```bash
+   agent-manager update
+   ```
+
+9.  **Monitor installation logs** for issues:
+
+   ```bash
+   tail -f .claude/installation.log
+   ```
+
+10. **Use source-specific conflict strategies** when needed:
+
+    ```yaml
+    sources:
+      - name: experimental-agents
+        conflict_strategy: skip  # Don't overwrite existing
+    ```
