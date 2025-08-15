@@ -25,27 +25,28 @@ func ValidatePath(path string) error {
 		return fmt.Errorf("null byte detected in path: %s", path)
 	}
 
-	// Additional security check for common malicious patterns
-	maliciousPatterns := []string{
-		"/etc/passwd",
-		"/etc/shadow",
+	// Normalize path for cross-platform comparison
+	cleanPath := filepath.Clean(path)
+	normalizedPath := strings.ToLower(strings.ReplaceAll(cleanPath, "\\", "/"))
+
+	// Comprehensive dangerous patterns (normalized to forward slashes)
+	dangerousPatterns := []string{
+		"/etc/",
 		"/proc/",
 		"/sys/",
 		"/dev/",
-		// Windows system paths
-		"c:\\windows\\",
-		"c:\\program files\\",
-		"c:\\program files (x86)\\",
-		"c:\\users\\all users\\",
-		"c:\\documents and settings\\",
-		"\\windows\\",
-		"\\program files\\",
-		"\\program files (x86)\\",
+		"/boot/",
+		"/root/",
+		"/var/log/",
+		"c:/windows/",
+		"c:/program files/",
+		"c:/program files (x86)/",
+		"c:/users/all users/",
+		"c:/documents and settings/",
 	}
 
-	cleanPath := filepath.Clean(path)
-	for _, pattern := range maliciousPatterns {
-		if strings.Contains(strings.ToLower(cleanPath), pattern) {
+	for _, pattern := range dangerousPatterns {
+		if strings.HasPrefix(normalizedPath, pattern) {
 			return fmt.Errorf("access to system path denied: %s", path)
 		}
 	}

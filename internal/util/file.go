@@ -102,24 +102,24 @@ func (fm *FileManager) Remove(path string) error {
 
 	path = filepath.Clean(path)
 
-	// Additional safety check - don't allow removing critical system directories
+	// Normalize for cross-platform comparison
+	normalizedPath := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+
+	// Critical system directories (normalized to forward slashes)
 	criticalPaths := []string{
-		"/", "/bin", "/sbin", "/usr", "/etc", "/proc", "/sys", "/dev",
-		// Windows critical paths
-		"C:\\", "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)",
-		"C:\\Users\\All Users", "C:\\Documents and Settings",
-		"c:\\", "c:\\windows", "c:\\program files", "c:\\program files (x86)",
-		"c:\\users\\all users", "c:\\documents and settings",
+		"/", "/bin", "/sbin", "/usr", "/etc", "/proc", "/sys", "/dev", "/boot", "/root",
+		"c:/", "c:/windows", "c:/program files", "c:/program files (x86)",
+		"c:/users/all users", "c:/documents and settings",
 	}
 
 	for _, criticalPath := range criticalPaths {
-		if path == criticalPath || strings.HasPrefix(path, criticalPath+"/") || strings.HasPrefix(path, criticalPath+"\\") {
+		if normalizedPath == criticalPath || strings.HasPrefix(normalizedPath, criticalPath+"/") {
 			return fmt.Errorf("refusing to remove system path: %s", path)
 		}
 	}
 
 	// Allow /tmp and /var/folders (temp directories) but not other /var paths
-	if strings.HasPrefix(path, "/var/") && !strings.HasPrefix(path, "/var/folders/") && !strings.HasPrefix(path, "/var/tmp/") {
+	if strings.HasPrefix(normalizedPath, "/var/") && !strings.HasPrefix(normalizedPath, "/var/folders/") && !strings.HasPrefix(normalizedPath, "/var/tmp/") {
 		return fmt.Errorf("refusing to remove system path: %s", path)
 	}
 
