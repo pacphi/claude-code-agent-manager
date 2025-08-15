@@ -1,4 +1,4 @@
-# Claude Code Agent Template
+# Claude Code Agent Manager
 
 A powerful, YAML-driven system for managing Claude Code agents from multiple sources with intelligent conflict resolution, transformations, and tracking.
 
@@ -21,8 +21,8 @@ This repository provides **Agent Manager**, a Go-based command-line tool that re
 ### 1. Clone and Build
 
 ```bash
-gh repo clone pacphi/claude-code-agent-template
-cd claude-code-agent-template
+gh repo clone pacphi/claude-code-agent-manager
+cd claude-code-agent-manager
 
 # Build the agent manager
 make build

@@ -73,7 +73,7 @@ agent-manager validate
 
    ```bash
    git clone https://github.com/pacphi/claude-code-agent-manager
-   cd claude-code-agent-template
+   cd claude-code-agent-manager
    ```
 
 2. **Install dependencies**:
