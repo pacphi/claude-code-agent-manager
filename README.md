@@ -4,7 +4,7 @@ A powerful, YAML-driven system for managing Claude Code agents from multiple sou
 
 ## Overview
 
-This repository provides **Agent Manager**, a Go-based command-line tool that revolutionizes how you install and manage Claude Code agents. Unlike the previous shell script approach, Agent Manager offers:
+This repository provides **Agent Manager**, a Go-based command-line tool that revolutionizes how you install and manage Claude Code agents. It offers:
 
 - **YAML-driven configuration** for complete control
 - **Multiple source types** (GitHub, Git, Local)
@@ -78,6 +78,7 @@ sources:
 ### ⚡ Conflict Resolution
 
 Intelligent handling of existing files:
+
 - **Backup**: Create timestamped backups (default)
 - **Overwrite**: Replace existing files
 - **Skip**: Keep existing, ignore new

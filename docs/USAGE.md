@@ -503,7 +503,7 @@ watch -n 1 cat .claude/.installed-agents.json
    agent-manager update
    ```
 
-9.  **Monitor installation logs** for issues:
+9. **Monitor installation logs** for issues:
 
    ```bash
    tail -f .claude/installation.log
