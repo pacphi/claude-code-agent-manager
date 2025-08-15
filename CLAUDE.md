@@ -75,7 +75,7 @@ The configuration supports variable substitution:
 
 ## Dependencies
 
-- Go 1.23+ required
+- Go 1.24.6+ required
 - Key dependencies: cobra (CLI), go-git (Git operations), yaml.v3 (configuration)
 - Optional: GitHub CLI for enhanced GitHub integration
 - Optional: golangci-lint for linting

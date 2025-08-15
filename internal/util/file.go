@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	securejoin "github.com/cyphar/filepath-securejoin"
 )
 
 // FileManager provides secure file operations
@@ -169,23 +171,14 @@ func SecureJoin(base string, elem ...string) (string, error) {
 		}
 	}
 
-	// Join and clean the path
-	result := filepath.Join(append([]string{base}, elem...)...)
-	result = filepath.Clean(result)
+	// Use the secure join library which properly handles symlinks and path traversal
+	// Join all elements first
+	joinedElem := filepath.Join(elem...)
 
-	// Ensure the result is still under the base path
-	absBase, err := filepath.Abs(base)
+	// Use securejoin to safely join with the base, preventing any path traversal
+	result, err := securejoin.SecureJoin(base, joinedElem)
 	if err != nil {
-		return "", fmt.Errorf("failed to get absolute base path: %w", err)
-	}
-
-	absResult, err := filepath.Abs(result)
-	if err != nil {
-		return "", fmt.Errorf("failed to get absolute result path: %w", err)
-	}
-
-	if !strings.HasPrefix(absResult, absBase) {
-		return "", fmt.Errorf("path traversal detected: result %s is outside base %s", absResult, absBase)
+		return "", fmt.Errorf("secure join failed: %w", err)
 	}
 
 	return result, nil

@@ -17,7 +17,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.x
+        go-version: 1.24.6
 
     - name: Check out code
       uses: actions/checkout@v5
@@ -30,9 +30,9 @@ jobs:
         path: |
           ~/go/pkg/mod
           ~/.cache/go-build
-        key: ${{ runner.os }}-go-1.24.x-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-1.24.6-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-1.24.x-
+          ${{ runner.os }}-go-1.24.6-
           ${{ runner.os }}-go-
 
     - name: Download dependencies

@@ -160,7 +160,7 @@ sources:
 
 ## Requirements
 
-- **Go 1.23+**: For building Agent Manager
+- **Go 1.24.6+**: For building Agent Manager
 - **Git**: For cloning repositories
 - **GitHub CLI** (optional): Enhanced GitHub integration
 

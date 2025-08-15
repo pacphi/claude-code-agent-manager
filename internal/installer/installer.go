@@ -3,7 +3,6 @@ package installer
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -507,15 +506,20 @@ func (i *Installer) runPostInstall(action config.PostInstall) error {
 		fmt.Printf("Executing post-install script: %s %v\n", action.Path, action.Args)
 	}
 
-	// Prepare the command with validated inputs
-	args := append([]string{}, action.Args...)
-	cmd := exec.Command("bash", append([]string{action.Path}, args...)...)
+	// Prepare the command with validated inputs using SecureCommand
+	args := append([]string{action.Path}, action.Args...)
+	cmd, err := util.SecureCommand("bash", args...)
+	if err != nil {
+		return fmt.Errorf("failed to create secure command for post-install script: %w", err)
+	}
 
 	// Set working directory to project root
 	cmd.Dir, _ = os.Getwd()
 
-	// Set up environment
-	cmd.Env = os.Environ()
+	// Set up secure environment - SecureCommand already sets this, but we can add project-specific vars
+	secureEnv := cmd.Env
+	// Add any project-specific environment variables if needed
+	cmd.Env = secureEnv
 
 	// Capture output
 	output, err := cmd.CombinedOutput()

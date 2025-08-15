@@ -80,6 +80,67 @@ func ValidateRepository(repo string) error {
 	return nil
 }
 
+// ValidateScriptPath validates that script paths are in allowed directories
+func ValidateScriptPath(scriptPath string) error {
+	if scriptPath == "" {
+		return fmt.Errorf("script path cannot be empty")
+	}
+
+	// Clean and resolve the path
+	cleanPath := filepath.Clean(scriptPath)
+
+	// Check for path traversal attempts
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("path traversal detected in script path: %s", scriptPath)
+	}
+
+	// Define allowed script directories (configurable)
+	allowedDirs := []string{
+		"./scripts/",
+		"scripts/",
+		"/usr/local/bin/agent-manager-scripts/",
+	}
+
+	// Check if script is in an allowed directory
+	isAllowed := false
+	for _, dir := range allowedDirs {
+		// Resolve absolute paths for comparison
+		absDir, _ := filepath.Abs(dir)
+		absScript, _ := filepath.Abs(cleanPath)
+
+		if strings.HasPrefix(absScript, absDir) {
+			isAllowed = true
+			break
+		}
+	}
+
+	if !isAllowed {
+		// Check if script exists in working directory's scripts folder
+		cwd, _ := os.Getwd()
+		localScriptsDir := filepath.Join(cwd, "scripts")
+		absScript, _ := filepath.Abs(cleanPath)
+		if strings.HasPrefix(absScript, localScriptsDir) {
+			isAllowed = true
+		}
+	}
+
+	if !isAllowed {
+		return fmt.Errorf("script path not in allowed directories: %s", scriptPath)
+	}
+
+	// Verify the script exists and is executable
+	info, err := os.Stat(cleanPath)
+	if err != nil {
+		return fmt.Errorf("script not found: %w", err)
+	}
+
+	if info.IsDir() {
+		return fmt.Errorf("path is a directory, not a script: %s", scriptPath)
+	}
+
+	return nil
+}
+
 // ValidateBranch validates git branch names
 func ValidateBranch(branch string) error {
 	if branch == "" {
@@ -112,12 +173,26 @@ func SecureCommand(name string, args ...string) (*exec.Cmd, error) {
 
 	// Only allow specific known safe commands
 	allowedCommands := map[string]bool{
-		"git": true,
-		"gh":  true,
+		"git":  true,
+		"gh":   true,
+		"bash": true,
+		"sh":   true,
 	}
 
 	if !allowedCommands[name] {
 		return nil, fmt.Errorf("command not allowed: %s", name)
+	}
+
+	// Additional validation for script executors
+	if name == "bash" || name == "sh" {
+		// First argument should be the script path
+		if len(args) > 0 {
+			scriptPath := args[0]
+			// Validate script path is within allowed directories
+			if err := ValidateScriptPath(scriptPath); err != nil {
+				return nil, fmt.Errorf("invalid script path: %w", err)
+			}
+		}
 	}
 
 	// Validate each argument
@@ -141,6 +216,21 @@ func validateCommandArg(arg string) error {
 	// Check for null bytes
 	if strings.Contains(arg, "\x00") {
 		return fmt.Errorf("null byte detected in argument: %s", arg)
+	}
+
+	// Check for newline characters
+	if strings.Contains(arg, "\n") || strings.Contains(arg, "\r") {
+		return fmt.Errorf("newline character detected in argument: %s", arg)
+	}
+
+	// Check for environment variable expansion patterns
+	if strings.Contains(arg, "${") || strings.Contains(arg, "$IFS") {
+		return fmt.Errorf("environment variable expansion detected in argument: %s", arg)
+	}
+
+	// Check for path traversal patterns
+	if strings.Contains(arg, "../") || strings.Contains(arg, "..\\") {
+		return fmt.Errorf("path traversal detected in argument: %s", arg)
 	}
 
 	// Check for command injection patterns

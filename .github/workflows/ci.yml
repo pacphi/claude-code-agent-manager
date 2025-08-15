@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go-version: [1.23.x, 1.24.x, 1.25.x]
+        go-version: [1.24.6]
 
     steps:
     - name: Set up Go ${{ matrix.go-version }}
@@ -85,7 +85,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.x
+        go-version: 1.24.6
 
     - name: Check out code
       uses: actions/checkout@v5
@@ -95,9 +95,9 @@ jobs:
       with:
         path: |
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-1.24.x-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-1.24.6-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-1.24.x-
+          ${{ runner.os }}-go-1.24.6-
           ${{ runner.os }}-go-
 
     - name: Build binary
@@ -121,7 +121,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.x
+        go-version: 1.24.6
 
     - name: Check out code
       uses: actions/checkout@v5
@@ -129,7 +129,7 @@ jobs:
     - name: Run govulncheck
       uses: golang/govulncheck-action@v1
       with:
-        go-version-input: 1.24.x
+        go-version-input: 1.24.6
         go-package: ./...
 
     - name: Run Trivy vulnerability scanner
@@ -142,6 +142,6 @@ jobs:
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       with:
         sarif_file: 'trivy-results.sarif'

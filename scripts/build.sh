@@ -38,7 +38,7 @@ fi
 
 # Check Go version
 GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-REQUIRED_VERSION="1.23"
+REQUIRED_VERSION="1.24.6"
 
 if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$GO_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
     echo -e "${YELLOW}Warning: Go version $GO_VERSION is installed, but $REQUIRED_VERSION or later is recommended${NC}"

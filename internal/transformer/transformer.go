@@ -3,7 +3,6 @@ package transformer
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -248,9 +247,16 @@ func (t *Transformer) runCustomScript(files []string, transform config.Transform
 
 	args = append(args, sourcePath, targetPath)
 
-	// Run the script
-	cmd := exec.Command(transform.Script, args...)
-	cmd.Env = append(os.Environ(),
+	// Run the script using SecureCommand for validation
+	// First argument should be the script path
+	scriptArgs := append([]string{transform.Script}, args...)
+	cmd, err := util.SecureCommand("bash", scriptArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create secure command for transformation script: %w", err)
+	}
+
+	// Add project-specific environment variables to the secure environment
+	cmd.Env = append(cmd.Env,
 		fmt.Sprintf("SOURCE_PATH=%s", sourcePath),
 		fmt.Sprintf("TARGET_PATH=%s", targetPath),
 		fmt.Sprintf("FILES_COUNT=%d", len(files)),
