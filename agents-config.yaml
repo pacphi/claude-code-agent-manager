@@ -47,6 +47,20 @@ sources:
       exclude:
         patterns: ["CLAUDE.md","README.md","MIGRATION_SUMMARY.md"]
 
+  - name: wshobson-subagents-collection
+    enabled: false
+    type: github
+    repository: wshobson/agents
+    branch: main
+    paths:
+      source: .
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+      exclude:
+        patterns: ["README.md"]
+
   # Example: Custom agents from another repository
   # - name: custom-agents
   #   enabled: false
