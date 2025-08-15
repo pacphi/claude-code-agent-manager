@@ -118,6 +118,7 @@ internal/
 - **[Build Guide](docs/BUILD.md)**: Comprehensive build and installation instructions
 - **[Usage Guide](docs/USAGE.md)**: Detailed command examples and workflows
 - **[Configuration Reference](docs/CONFIG.md)**: Complete YAML configuration documentation
+- **[Release Guide](docs/RELEASE.md)**: Release process and version management
 - **[Architecture Overview](docs/README.md)**: Technical details and design decisions
 
 ## Configuration Examples
