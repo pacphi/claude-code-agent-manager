@@ -131,9 +131,9 @@ func (f *Formatter) PrintAgentDetails(agent marketplace.Agent, content string) {
 			fmt.Printf("%s\n", content)
 		}
 	} else if content == agent.Description {
-		fmt.Printf("\n%s: Unable to extract full agent definition. The agent URL may not be available.\n", 
+		fmt.Printf("\n%s: Unable to extract full agent definition. The agent URL may not be available.\n",
 			color.YellowString("Note"))
-		fmt.Printf("You can visit the agent page directly at: %s\n", 
+		fmt.Printf("You can visit the agent page directly at: %s\n",
 			color.CyanString("https://subagents.sh/agents/<agent-id>"))
 	}
 
@@ -194,13 +194,13 @@ func (f *Formatter) wrapText(text string, width int) string {
 
 	var result []string
 	lines := strings.Split(text, "\n")
-	
+
 	for _, line := range lines {
 		if len(line) <= width {
 			result = append(result, line)
 			continue
 		}
-		
+
 		// Wrap long lines
 		words := strings.Fields(line)
 		current := ""
@@ -218,6 +218,6 @@ func (f *Formatter) wrapText(text string, width int) string {
 			result = append(result, current)
 		}
 	}
-	
+
 	return strings.Join(result, "\n")
 }

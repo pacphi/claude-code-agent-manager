@@ -121,7 +121,7 @@
 				const links = container.querySelectorAll('a');
 				for (const link of links) {
 					const href = link.href || '';
-					if (href && (href.includes('/agents/') || href.includes('/agent/') || 
+					if (href && (href.includes('/agents/') || href.includes('/agent/') ||
 						href.includes('/subagent/') ||
 						(link.textContent?.includes('View') && href.includes('subagents.sh')))) {
 						url = href;
@@ -215,19 +215,19 @@
 					try {
 						// Store current URL
 						const beforeClickUrl = window.location.href;
-						
+
 						// Find clickable area - could be the entire container or View button
 						const clickTarget = viewButton.closest('[role="button"], button, a, [onclick]') || viewButton;
-						
+
 						// Simulate click
 						clickTarget.click();
-						
+
 						// Wait a short time for potential navigation
 						setTimeout(() => {
 							if (window.location.href !== beforeClickUrl && window.location.href.includes('/agents/')) {
 								url = window.location.href;
 								console.log(`Found agent URL via click simulation: ${url}`);
-								
+
 								// Navigate back to original page
 								window.history.back();
 							}
@@ -260,7 +260,7 @@
 	console.log(`Total agents extracted: ${agents.length}`);
 	const agentsWithUrls = agents.filter(a => a.url).length;
 	console.log(`Agents with URLs: ${agentsWithUrls}/${agents.length}`);
-	
+
 	if (agents.length > 0) {
 		console.log('First agent:', agents[0]);
 		if (agentsWithUrls > 0) {

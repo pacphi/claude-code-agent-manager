@@ -6,8 +6,8 @@
 	// Utility function to check if content indicators are present
 	function hasContentLoaded() {
 		const hasCopyButton = document.querySelector('button')?.textContent?.includes('Copy Content');
-		const hasYamlContent = document.body.textContent.includes('---') && 
-							   document.body.textContent.includes('name:') && 
+		const hasYamlContent = document.body.textContent.includes('---') &&
+							   document.body.textContent.includes('name:') &&
 							   document.body.textContent.includes('description:');
 		return hasCopyButton || hasYamlContent;
 	}
@@ -15,7 +15,7 @@
 	// Function to extract content using all strategies
 	function extractContent() {
 		console.log('Starting content extraction...');
-		
+
 		// Strategy 1: Find text content that looks like an agent definition
 		console.log('Strategy 1: Searching all elements for YAML content...');
 		const allElements = document.querySelectorAll('div, pre, code, p, span, section, article');
@@ -30,13 +30,13 @@
 				}
 			}
 		}
-		
+
 		// Strategy 2: Look for elements near the "Copy Content" button
 		console.log('Strategy 2: Searching near Copy Content button...');
-		const copyButtons = Array.from(document.querySelectorAll('button, [role="button"]')).filter(btn => 
+		const copyButtons = Array.from(document.querySelectorAll('button, [role="button"]')).filter(btn =>
 			btn.textContent && (btn.textContent.includes('Copy Content') || btn.textContent.includes('Copy') || btn.textContent.includes('Download'))
 		);
-		
+
 		for (const copyButton of copyButtons) {
 			console.log('Found copy-like button:', copyButton.textContent.trim());
 			// Look for content in nearby containers
@@ -50,24 +50,24 @@
 					null,
 					false
 				);
-				
+
 				let textContent = '';
 				let node;
 				while (node = walker.nextNode()) {
 					textContent += node.textContent;
 				}
-				
+
 				textContent = textContent.trim();
 				if (textContent.startsWith('---') && textContent.includes('name:') && textContent.length > 200) {
 					console.log('Strategy 2: Found agent content near copy button');
 					return textContent;
 				}
-				
+
 				parent = parent.parentElement;
 				depth++;
 			}
 		}
-		
+
 		// Strategy 3: Look for pre/code blocks and content containers
 		console.log('Strategy 3: Searching code blocks and content containers...');
 		const contentSelectors = [
@@ -75,7 +75,7 @@
 			'[class*="content"]', '[class*="markdown"]', '[class*="code"]',
 			'[id*="content"]', '[id*="agent"]', '[data-content]'
 		];
-		
+
 		for (const selector of contentSelectors) {
 			const elements = document.querySelectorAll(selector);
 			for (const block of elements) {
@@ -86,7 +86,7 @@
 				}
 			}
 		}
-		
+
 		// Strategy 4: Find by content structure - look for the main content area
 		console.log('Strategy 4: Searching main content areas...');
 		const mainSelectors = ['main', '[role="main"]', '.main-content', '#main', '.content', '.page-content'];
@@ -101,7 +101,7 @@
 					/^---\n[\s\S]*?\n---\n[\s\S]*/m,
 					/^---\r?\n[\s\S]*?\r?\n---\r?\n[\s\S]*/m
 				];
-				
+
 				for (const pattern of patterns) {
 					const match = allText.match(pattern);
 					if (match && match[0].length > 200) {
@@ -111,7 +111,7 @@
 				}
 			}
 		}
-		
+
 		// Strategy 5: Look in shadow DOM and iframes
 		console.log('Strategy 5: Searching shadow DOM and iframes...');
 		const elementsWithShadow = document.querySelectorAll('*');
@@ -127,7 +127,7 @@
 				}
 			}
 		}
-		
+
 		// Strategy 6: Search in script tags for JSON or embedded content
 		console.log('Strategy 6: Searching script tags for embedded content...');
 		const scripts = document.querySelectorAll('script');
@@ -149,7 +149,7 @@
 				// Ignore parsing errors
 			}
 		}
-		
+
 		console.log('No agent content found using any strategy');
 		return '';
 	}
@@ -158,32 +158,32 @@
 	function main() {
 		const maxRetries = 3;
 		const retryDelays = [500, 1000, 2000]; // Shorter delays for synchronous execution
-		
+
 		for (let attempt = 0; attempt < maxRetries; attempt++) {
 			console.log(`Content extraction attempt ${attempt + 1}/${maxRetries}`);
-			
+
 			// Synchronous wait for content to load
 			const startTime = Date.now();
 			const maxWait = 3000; // 3 seconds max wait
-			
+
 			while (Date.now() - startTime < maxWait) {
 				const hasCopyButton = document.querySelector('button')?.textContent?.includes('Copy Content');
-				const hasYamlContent = document.body.textContent.includes('---') && 
-									   document.body.textContent.includes('name:') && 
+				const hasYamlContent = document.body.textContent.includes('---') &&
+									   document.body.textContent.includes('name:') &&
 									   document.body.textContent.includes('description:');
-				
+
 				if (hasCopyButton || hasYamlContent) {
 					console.log(`Content loaded after ${Date.now() - startTime}ms`);
 					break;
 				}
-				
+
 				// Busy wait for a short time
 				const waitStart = Date.now();
 				while (Date.now() - waitStart < 100) {
 					// Short busy wait
 				}
 			}
-			
+
 			// Try to extract content
 			const content = extractContent();
 			if (content) {
@@ -191,7 +191,7 @@
 				console.log(`Content length: ${content.length} characters`);
 				return content;
 			}
-			
+
 			// If not the last attempt, wait before retrying
 			if (attempt < maxRetries - 1) {
 				console.log(`Attempt ${attempt + 1} failed, retrying in ${retryDelays[attempt]}ms...`);
@@ -201,7 +201,7 @@
 				}
 			}
 		}
-		
+
 		console.log('All extraction attempts failed');
 		return '';
 	}
