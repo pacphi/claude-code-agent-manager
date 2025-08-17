@@ -238,42 +238,22 @@ func (s *marketplaceService) GetAgentContent(ctx context.Context, agentID string
 		return agent.Description, nil
 	}
 
-	// Navigate to agent content page and extract content
-	if err := s.browser.Navigate(ctx, agent.ContentURL); err != nil {
-		return "", fmt.Errorf("failed to navigate to agent content: %w", err)
-	}
-
-	// Extract content using JavaScript
-	script := `
-		(function() {
-			// Look for common content containers
-			const selectors = [
-				'pre', 'code', '.content', '.agent-content',
-				'[data-content]', '.markdown-body'
-			];
-
-			for (const selector of selectors) {
-				const element = document.querySelector(selector);
-				if (element && element.textContent.trim().length > 50) {
-					return element.textContent.trim();
-				}
-			}
-
-			// Fallback to body content
-			return document.body.textContent.trim();
-		})();
-	`
-
-	result, err := s.browser.ExecuteScript(ctx, script)
+	// Use the content extractor to get the agent definition
+	content, err := s.extractors.Content.Extract(ctx, s.browser, agent.ContentURL)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract agent content: %w", err)
+		// Log the error but don't fail completely
+		util.DebugPrintf("Failed to extract content for agent %s: %v\n", agentID, err)
+		// Fall back to description if content extraction fails
+		return agent.Description, nil
 	}
 
-	if content, ok := result.(string); ok {
-		return content, nil
+	// Validate that we got actual content, not just an empty string
+	if content == "" || len(content) < len(agent.Description) {
+		util.DebugPrintf("Extracted content seems invalid (empty or too short), falling back to description\n")
+		return agent.Description, nil
 	}
 
-	return agent.Description, nil
+	return content, nil
 }
 
 // RefreshCache clears and rebuilds the cache

@@ -113,16 +113,28 @@ func (f *Formatter) PrintAgentDetails(agent marketplace.Agent, content string) {
 		fmt.Printf("%s: %s\n", color.HiWhiteString("URL"), agent.ContentURL)
 	}
 
-	fmt.Printf("\n%s:\n%s\n", color.HiWhiteString("Description"), agent.Description)
+	fmt.Printf("\n%s:\n", color.HiWhiteString("Description"))
+	fmt.Printf("%s\n", f.wrapText(agent.Description, 80))
 
 	if len(agent.Tags) > 0 {
 		fmt.Printf("\n%s: %s\n", color.HiWhiteString("Tags"), strings.Join(agent.Tags, ", "))
 	}
 
-	if content != "" {
-		fmt.Printf("\n%s:\n", color.HiWhiteString("Content"))
-		fmt.Printf("%s\n", strings.Repeat("-", 50))
-		fmt.Printf("%s\n", content)
+	if content != "" && content != agent.Description {
+		// Check if this is a full agent definition (with YAML frontmatter)
+		if strings.HasPrefix(strings.TrimSpace(content), "---") {
+			fmt.Printf("\n%s:\n", color.HiGreenString("═══ Agent Definition ═══"))
+			fmt.Printf("\n%s\n", content)
+		} else {
+			fmt.Printf("\n%s:\n", color.HiWhiteString("Content"))
+			fmt.Printf("%s\n", strings.Repeat("-", 50))
+			fmt.Printf("%s\n", content)
+		}
+	} else if content == agent.Description {
+		fmt.Printf("\n%s: Unable to extract full agent definition. The agent URL may not be available.\n", 
+			color.YellowString("Note"))
+		fmt.Printf("You can visit the agent page directly at: %s\n", 
+			color.CyanString("https://subagents.sh/agents/<agent-id>"))
 	}
 
 	fmt.Println()
@@ -172,4 +184,40 @@ func (f *Formatter) truncateString(s string, maxLen int) string {
 		return s[:maxLen]
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// wrapText wraps text at the specified width
+func (f *Formatter) wrapText(text string, width int) string {
+	if width <= 0 || len(text) <= width {
+		return text
+	}
+
+	var result []string
+	lines := strings.Split(text, "\n")
+	
+	for _, line := range lines {
+		if len(line) <= width {
+			result = append(result, line)
+			continue
+		}
+		
+		// Wrap long lines
+		words := strings.Fields(line)
+		current := ""
+		for _, word := range words {
+			if current == "" {
+				current = word
+			} else if len(current)+1+len(word) <= width {
+				current += " " + word
+			} else {
+				result = append(result, current)
+				current = word
+			}
+		}
+		if current != "" {
+			result = append(result, current)
+		}
+	}
+	
+	return strings.Join(result, "\n")
 }

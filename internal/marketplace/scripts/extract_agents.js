@@ -1,14 +1,28 @@
 (function() {
 	const agents = [];
 	const seenAgents = new Set();
+	const originalUrl = window.location.href;
 
-	console.log('=== NEW AGENT EXTRACTION ===');
+	console.log('=== ENHANCED AGENT EXTRACTION ===');
 	console.log('Page title:', document.title);
-	console.log('Page URL:', window.location.href);
+	console.log('Page URL:', originalUrl);
 
-	// Look for the main content area that contains the agent grid
-	// Based on the snapshot, agents are in a grid container
-	const agentContainers = [];
+	// Utility function to wait for navigation and extract URL
+	function waitForNavigation(timeout = 2000) {
+		return new Promise((resolve) => {
+			const startTime = Date.now();
+			const checkNavigation = () => {
+				if (window.location.href !== originalUrl) {
+					resolve(window.location.href);
+				} else if (Date.now() - startTime < timeout) {
+					setTimeout(checkNavigation, 100);
+				} else {
+					resolve(null);
+				}
+			};
+			checkNavigation();
+		});
+	}
 
 	// Find all View buttons first - these are unique to agent cards
 	const viewButtons = Array.from(document.querySelectorAll('button')).filter(btn =>
@@ -102,14 +116,124 @@
 					rating = 0.0;
 				}
 
-				// Look for links that might be the agent URL
+				// Enhanced URL extraction strategies
+				// Strategy 1: Look for traditional links
 				const links = container.querySelectorAll('a');
 				for (const link of links) {
 					const href = link.href || '';
-					if (href && (href.includes('/agent/') || href.includes('/subagent/') ||
+					if (href && (href.includes('/agents/') || href.includes('/agent/') || 
+						href.includes('/subagent/') ||
 						(link.textContent?.includes('View') && href.includes('subagents.sh')))) {
 						url = href;
+						console.log(`Found agent URL via link: ${url}`);
 						break;
+					}
+				}
+
+				// Strategy 2: Look for data attributes containing UUIDs
+				if (!url) {
+					const allElements = container.querySelectorAll('*');
+					for (const element of allElements) {
+						for (const attr of element.attributes) {
+							if (attr.name.startsWith('data-') && attr.value) {
+								// Check if value looks like a UUID
+								const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+								const match = attr.value.match(uuidPattern);
+								if (match) {
+									url = `https://subagents.sh/agents/${match[0]}`;
+									console.log(`Found agent URL via data attribute ${attr.name}: ${url}`);
+									break;
+								}
+							}
+						}
+						if (url) break;
+					}
+				}
+
+				// Strategy 3: Look for onClick handlers or event data
+				if (!url) {
+					const clickableElements = container.querySelectorAll('[onclick], [data-href], [data-url], [data-id]');
+					for (const element of clickableElements) {
+						// Check onClick attribute
+						const onclick = element.getAttribute('onclick');
+						if (onclick && onclick.includes('agents')) {
+							const uuidMatch = onclick.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+							if (uuidMatch) {
+								url = `https://subagents.sh/agents/${uuidMatch[0]}`;
+								console.log(`Found agent URL via onclick: ${url}`);
+								break;
+							}
+						}
+
+						// Check data-href, data-url, data-id attributes
+						const dataAttrs = ['data-href', 'data-url', 'data-id'];
+						for (const attr of dataAttrs) {
+							const value = element.getAttribute(attr);
+							if (value) {
+								if (value.includes('/agents/')) {
+									url = value.startsWith('http') ? value : `https://subagents.sh${value}`;
+									console.log(`Found agent URL via ${attr}: ${url}`);
+									break;
+								}
+								// Check if it's a UUID
+								const uuidMatch = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+								if (uuidMatch) {
+									url = `https://subagents.sh/agents/${uuidMatch[0]}`;
+									console.log(`Found agent URL via ${attr} UUID: ${url}`);
+									break;
+								}
+							}
+						}
+						if (url) break;
+					}
+				}
+
+				// Strategy 4: Look for React props or embedded JSON data
+				if (!url) {
+					const scripts = container.querySelectorAll('script');
+					for (const script of scripts) {
+						try {
+							const scriptContent = script.textContent || script.innerHTML;
+							if (scriptContent) {
+								// Look for UUID patterns in script content
+								const uuidMatch = scriptContent.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+								if (uuidMatch) {
+									url = `https://subagents.sh/agents/${uuidMatch[0]}`;
+									console.log(`Found agent URL via script content: ${url}`);
+									break;
+								}
+							}
+						} catch (e) {
+							// Ignore parsing errors
+						}
+					}
+				}
+
+				// Strategy 5: Click simulation (last resort) - Note: This should be used carefully in automation
+				if (!url && index < 3) { // Limit to first 3 agents to avoid excessive navigation
+					console.log(`Attempting click simulation for agent: ${name}`);
+					try {
+						// Store current URL
+						const beforeClickUrl = window.location.href;
+						
+						// Find clickable area - could be the entire container or View button
+						const clickTarget = viewButton.closest('[role="button"], button, a, [onclick]') || viewButton;
+						
+						// Simulate click
+						clickTarget.click();
+						
+						// Wait a short time for potential navigation
+						setTimeout(() => {
+							if (window.location.href !== beforeClickUrl && window.location.href.includes('/agents/')) {
+								url = window.location.href;
+								console.log(`Found agent URL via click simulation: ${url}`);
+								
+								// Navigate back to original page
+								window.history.back();
+							}
+						}, 500);
+					} catch (e) {
+						console.log(`Click simulation failed for ${name}:`, e.message);
 					}
 				}
 
@@ -134,8 +258,15 @@
 	});
 
 	console.log(`Total agents extracted: ${agents.length}`);
+	const agentsWithUrls = agents.filter(a => a.url).length;
+	console.log(`Agents with URLs: ${agentsWithUrls}/${agents.length}`);
+	
 	if (agents.length > 0) {
 		console.log('First agent:', agents[0]);
+		if (agentsWithUrls > 0) {
+			const firstWithUrl = agents.find(a => a.url);
+			console.log('First agent with URL:', firstWithUrl);
+		}
 	}
 
 	return {
@@ -143,9 +274,12 @@
 		debug: {
 			viewButtonsFound: viewButtons.length,
 			agentsExtracted: agents.length,
+			agentsWithUrls: agentsWithUrls,
+			urlExtractionRate: agents.length > 0 ? (agentsWithUrls / agents.length * 100).toFixed(1) + '%' : '0%',
 			bodyLength: document.body.textContent.length,
 			hasAgentsFoundText: document.body.textContent.includes('Agents Found'),
-			sampleAgentNames: agents.slice(0, 3).map(a => a.name)
+			sampleAgentNames: agents.slice(0, 3).map(a => a.name),
+			sampleUrls: agents.filter(a => a.url).slice(0, 3).map(a => a.url)
 		}
 	};
 })();

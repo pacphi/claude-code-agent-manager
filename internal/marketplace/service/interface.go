@@ -50,6 +50,7 @@ type SearchQuery struct {
 type ExtractorSet struct {
 	Categories CategoryExtractor
 	Agents     AgentExtractor
+	Content    ContentExtractor
 }
 
 // CategoryExtractor extracts category data
@@ -60,4 +61,9 @@ type CategoryExtractor interface {
 // AgentExtractor extracts agent data
 type AgentExtractor interface {
 	Extract(ctx context.Context, browser browser.Controller, category string) ([]types.Agent, error)
+}
+
+// ContentExtractor extracts agent content/definition
+type ContentExtractor interface {
+	Extract(ctx context.Context, browser browser.Controller, url string) (string, error)
 }

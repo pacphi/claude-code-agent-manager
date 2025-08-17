@@ -22,6 +22,7 @@ func (f *Factory) CreateExtractorSet() service.ExtractorSet {
 	return service.ExtractorSet{
 		Categories: NewCategoryExtractor(f.scriptLoader),
 		Agents:     NewAgentExtractor(f.scriptLoader),
+		Content:    NewContentExtractor(f.scriptLoader),
 	}
 }
 
