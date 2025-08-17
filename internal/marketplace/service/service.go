@@ -244,7 +244,7 @@ func (s *marketplaceService) GetAgentContent(ctx context.Context, agentID string
 		util.DebugPrintf("Using stored ContentURL: %s\n", detailURL)
 	} else {
 		// Try to find the actual agent detail page URL by navigation
-		detailURL, err = s.findAgentDetailURL(ctx, agentID, agent.Name)
+		detailURL, err = s.findAgentDetailURL(ctx, agent.Name)
 		if err != nil {
 			util.DebugPrintf("Failed to find agent detail URL for %s: %v\n", agentID, err)
 			return agent.Description, nil
@@ -279,7 +279,7 @@ func (s *marketplaceService) GetAgentContent(ctx context.Context, agentID string
 }
 
 // findAgentDetailURL attempts to find the actual detail page URL for an agent
-func (s *marketplaceService) findAgentDetailURL(ctx context.Context, agentID, agentName string) (string, error) {
+func (s *marketplaceService) findAgentDetailURL(ctx context.Context, agentName string) (string, error) {
 	// Strategy 1: Navigate and click approach for agents page
 	agentsURL := fmt.Sprintf("%s/agents", s.baseURL)
 	if err := s.browser.Navigate(ctx, agentsURL); err != nil {
