@@ -107,7 +107,7 @@ func validateSourceBasics(source *Source) error {
 	}
 
 	// Validate source type
-	validTypes := []string{"github", "git", "local"}
+	validTypes := []string{"github", "git", "local", "subagents"}
 	if !contains(validTypes, source.Type) {
 		return fmt.Errorf("invalid source type: %s (must be one of: %s)",
 			source.Type, strings.Join(validTypes, ", "))

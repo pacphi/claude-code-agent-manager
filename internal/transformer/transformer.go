@@ -69,7 +69,9 @@ func (t *Transformer) removeNumericPrefix(files []string, transform config.Trans
 			// Check if we've already processed this directory
 			if newDir, exists := processedDirs[dir]; exists {
 				// Use the already transformed directory
-				result = append(result, filepath.Join(newDir, filepath.Base(file)))
+				newPath := filepath.Join(newDir, filepath.Base(file))
+				// Normalize path separators to forward slashes for consistency
+				result = append(result, filepath.ToSlash(newPath))
 			} else {
 				// Transform directory name
 				newBase := re.ReplaceAllString(base, "")
@@ -77,15 +79,17 @@ func (t *Transformer) removeNumericPrefix(files []string, transform config.Trans
 				processedDirs[dir] = newDir
 
 				// Update file path
-				result = append(result, filepath.Join(newDir, filepath.Base(file)))
+				newPath := filepath.Join(newDir, filepath.Base(file))
+				// Normalize path separators to forward slashes for consistency
+				result = append(result, filepath.ToSlash(newPath))
 
 				// Actually rename the directory if it exists
 				oldPath := filepath.Join(sourcePath, dir)
-				newPath := filepath.Join(sourcePath, newDir)
+				newDirPath := filepath.Join(sourcePath, newDir)
 
 				if _, err := os.Stat(oldPath); err == nil {
-					if err := os.Rename(oldPath, newPath); err != nil {
-						return nil, fmt.Errorf("failed to rename directory %s to %s: %w", oldPath, newPath, err)
+					if err := os.Rename(oldPath, newDirPath); err != nil {
+						return nil, fmt.Errorf("failed to rename directory %s to %s: %w", oldPath, newDirPath, err)
 					}
 				}
 			}

@@ -73,13 +73,26 @@ The configuration supports variable substitution:
 - `${settings.key}` - References settings values
 - `${env.VAR}` - References environment variables
 
+## Prerequisites
+
+### Required
+- **Go 1.24.6+** - For building and running Agent Manager
+- **Git** - For version control and repository operations
+- **Make** - For build commands (recommended, but optional)
+
+### Marketplace Integration (Optional)
+- **Chrome/Chromium/Brave browser** - Required for subagents.sh marketplace integration
+  - Supported browsers: Google Chrome, Chromium, Chrome Canary, Microsoft Edge (Chromium-based), Brave Browser
+  - See [Usage Guide](docs/USAGE.md#marketplace-commands) for installation instructions
+
+### Development (Optional)
+- **GitHub CLI (gh)** - Enhanced GitHub integration
+- **golangci-lint** - Code linting (runs automatically in CI)
+- **entr** - Hot reload development mode
+
 ## Dependencies
 
-- Go 1.24.6+ required
-- Key dependencies: cobra (CLI), go-git (Git operations), yaml.v3 (configuration)
-- Optional: GitHub CLI for enhanced GitHub integration
-- Optional: golangci-lint for linting
-- Optional: entr for development hot reload
+Key Go dependencies: cobra (CLI), go-git (Git operations), yaml.v3 (configuration), chromedp (browser automation)
 
 ## Testing Strategy
 

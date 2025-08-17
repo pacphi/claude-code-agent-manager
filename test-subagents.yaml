@@ -1,0 +1,26 @@
+version: "1.0"
+
+settings:
+  base_dir: .claude/agents
+  docs_dir: docs
+  conflict_strategy: backup
+  backup_dir: .claude/backups
+  log_level: debug
+  concurrent_downloads: 3
+  timeout: 5m
+  continue_on_error: false
+
+sources:
+  - name: test-subagents
+    enabled: true
+    type: subagents
+    category: "ai-ml"
+    paths:
+      target: .claude/agents/marketplace
+    cache:
+      enabled: true
+      ttl_hours: 1
+
+metadata:
+  tracking_file: .claude/.installed-agents.json
+  log_file: .claude/installation.log

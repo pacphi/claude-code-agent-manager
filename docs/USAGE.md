@@ -18,6 +18,7 @@ agent-manager [command] [options]
 | `uninstall` | Remove installed agents |
 | `update` | Update existing installations |
 | `list` | List installed agents |
+| `marketplace` | Browse and discover agents from subagents.sh |
 | `validate` | Validate configuration file |
 | `version` | Show version information |
 
@@ -140,6 +141,149 @@ Show detailed information about installations:
 
 ```bash
 agent-manager list --verbose
+```
+
+## Marketplace Commands
+
+The marketplace integration allows you to browse and discover agents from the [subagents.sh](https://subagents.sh) marketplace.
+
+### Prerequisites
+
+**Browser Requirement**: Chrome, Chromium, or a Chromium-based browser must be installed and accessible in your PATH.
+
+**Supported browsers:**
+- Google Chrome
+- Chromium
+- Chrome Canary
+- Microsoft Edge (Chromium-based)
+- Brave Browser
+
+**Installation options:**
+
+**macOS:**
+```bash
+# Via Homebrew
+brew install --cask google-chrome
+# or
+brew install chromium
+# or
+brew install --cask brave-browser
+```
+
+**Linux:**
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install google-chrome-stable
+# or
+sudo apt-get install chromium-browser
+
+# CentOS/RHEL/Fedora
+sudo yum install google-chrome-stable
+# or
+sudo dnf install chromium
+```
+
+**Windows:**
+```cmd
+# Via Chocolatey
+choco install googlechrome
+# or
+choco install chromium
+# or
+choco install brave
+```
+
+### Browse Categories
+
+List all available agent categories:
+
+```bash
+agent-manager marketplace list
+```
+
+### Browse Agents by Category
+
+List agents in a specific category:
+
+```bash
+agent-manager marketplace list --category "Development"
+agent-manager marketplace list --category "AI & ML"
+agent-manager marketplace list --category "Writing"
+```
+
+### Show Agent Details
+
+View detailed information about a specific agent:
+
+```bash
+agent-manager marketplace show "code-reviewer"
+```
+
+Show agent with full definition (when available):
+
+```bash
+agent-manager marketplace show "documentation-expert" --content
+```
+
+### Refresh Cache
+
+Update cached marketplace data:
+
+```bash
+agent-manager marketplace refresh
+```
+
+### Installing Marketplace Agents
+
+Once you find an agent you want to install, add it to your `agents-config.yaml`:
+
+```yaml
+sources:
+  - name: subagents-marketplace-all
+    enabled: true
+    type: subagents
+    paths:
+      target: ${settings.base_dir}/marketplace
+    cache:
+      enabled: true
+      ttl_hours: 1
+      max_size_mb: 50
+```
+
+Or target a specific agent:
+
+```yaml
+sources:
+  - name: specific-agent
+    enabled: true
+    type: subagents
+    category: "Development"  # Optional: filter by category
+    paths:
+      target: .claude/agents
+    filters:
+      include:
+        regex: ["^agent-name.*\\.md$"]  # Filter for specific agent
+```
+
+Then run:
+
+```bash
+agent-manager install
+```
+
+### Troubleshooting Marketplace
+
+**"executable file not found in $PATH"**: Chrome/Chromium is not installed or not in your PATH. Install a supported browser using the installation options above.
+
+**"context deadline exceeded"**: Indicates slow network connection or browser startup issues. Try increasing the timeout or checking your network connection.
+
+**"No categories found" or "No agents found"**: May indicate changes to the subagents.sh website structure or JavaScript execution issues. Check logs and consider refreshing the cache.
+
+Enable verbose logging for detailed browser automation logs:
+
+```bash
+agent-manager marketplace list --verbose
 ```
 
 ## Configuration Validation
@@ -296,6 +440,34 @@ Local development:
     source: ~/my-local-agents
     target: .claude/agents/local
   watch: true
+```
+
+### Marketplace Sources
+
+Subagents.sh marketplace integration:
+
+```yaml
+- name: subagents-marketplace-all
+  type: subagents
+  paths:
+    target: ${settings.base_dir}/marketplace
+  cache:
+    enabled: true
+    ttl_hours: 1
+    max_size_mb: 50
+```
+
+With category filtering:
+
+```yaml
+- name: development-agents
+  type: subagents
+  category: "Development"
+  paths:
+    target: .claude/agents/dev
+  filters:
+    include:
+      regex: ["^(code-reviewer|documentation-expert).*\\.md$"]
 ```
 
 ## Conflict Resolution
