@@ -33,6 +33,20 @@ sources:
       - type: script
         path: scripts/post-install/voltagent-fix-doc-links.sh
 
+  - name: augmnt-agents
+    enabled: false
+    type: github
+    repository: augmnt/agents
+    branch: main
+    paths:
+      source: .
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+      exclude:
+        patterns: ["README.md"]
+
   - name: 610-claude-subagents
     enabled: false
     type: github
@@ -68,6 +82,30 @@ sources:
     branch: main
     paths:
       source: subagents
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+
+  - name: sio-tou-lai-subagents
+    enabled: false
+    type: github
+    repository: lst97/claude-code-subagents
+    branch: main
+    paths:
+      source: agents
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+
+  - name: agent-orchestra
+    enabled: false
+    type: github
+    repository: 0ldh/claude-code-agents-orchestra
+    branch: main
+    paths:
+      source: agents
       target: ${settings.base_dir}
     filters:
       include:
