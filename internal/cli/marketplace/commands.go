@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pacphi/claude-code-agent-manager/internal/cli/marketplace/display"
-	"github.com/pacphi/claude-code-agent-manager/internal/marketplace"
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace/service"
 	"github.com/spf13/cobra"
 )
@@ -27,19 +26,17 @@ func NewCommands(svc service.MarketplaceService) *Commands {
 func (c *Commands) NewMarketplaceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "marketplace",
-		Short: "Browse and search the subagents.sh marketplace",
-		Long: `Discover, search, and view details of Claude Code agents from the subagents.sh marketplace.
+		Short: "Browse the subagents.sh marketplace",
+		Long: `Discover and view details of Claude Code agents from the subagents.sh marketplace.
 
 Examples:
   agent-manager marketplace list                    # List all categories
   agent-manager marketplace list --category dev     # List agents in development category
-  agent-manager marketplace search "python"         # Search for Python-related agents
   agent-manager marketplace show code-reviewer      # Show details for a specific agent
   agent-manager marketplace refresh                 # Refresh cached marketplace data`,
 	}
 
 	cmd.AddCommand(c.newListCmd())
-	cmd.AddCommand(c.newSearchCmd())
 	cmd.AddCommand(c.newShowCmd())
 	cmd.AddCommand(c.newRefreshCmd())
 
@@ -65,30 +62,6 @@ func (c *Commands) newListCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&category, "category", "", "filter by category")
 	cmd.Flags().IntVarP(&limit, "limit", "l", 20, "limit number of results")
-
-	return cmd
-}
-
-// newSearchCmd creates the search command
-func (c *Commands) newSearchCmd() *cobra.Command {
-	var category string
-	var minRating float32
-	var limit int
-
-	cmd := &cobra.Command{
-		Use:   "search <query>",
-		Short: "Search marketplace agents",
-		Long:  "Search for agents by name, description, or tags",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			query := args[0]
-			return c.searchAgents(cmd, query, category, minRating, limit)
-		},
-	}
-
-	cmd.Flags().StringVar(&category, "category", "", "filter by category")
-	cmd.Flags().Float32Var(&minRating, "min-rating", 0, "minimum rating filter")
-	cmd.Flags().IntVarP(&limit, "limit", "l", 10, "limit number of results")
 
 	return cmd
 }
@@ -150,33 +123,6 @@ func (c *Commands) listAgents(cmd *cobra.Command, category string, limit int) er
 	}
 
 	c.display.PrintAgents(agents)
-	return nil
-}
-
-// searchAgents searches for agents matching the query
-func (c *Commands) searchAgents(cmd *cobra.Command, query, category string, minRating float32, limit int) error {
-	agents, err := c.service.SearchAgents(cmd.Context(), query)
-	if err != nil {
-		return fmt.Errorf("failed to search agents: %w", err)
-	}
-
-	// Apply filters
-	filteredAgents := make([]marketplace.Agent, 0, len(agents))
-	for _, agent := range agents {
-		if category != "" && agent.Category != category {
-			continue
-		}
-		if minRating > 0 && agent.Rating < minRating {
-			continue
-		}
-		filteredAgents = append(filteredAgents, agent)
-	}
-
-	if limit > 0 && limit < len(filteredAgents) {
-		filteredAgents = filteredAgents[:limit]
-	}
-
-	c.display.PrintSearchResults(filteredAgents, query)
 	return nil
 }
 

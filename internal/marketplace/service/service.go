@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace/browser"
@@ -190,40 +189,6 @@ func (s *marketplaceService) GetAgent(ctx context.Context, agentID string) (*typ
 	return nil, ErrAgentNotFound
 }
 
-// SearchAgents searches for agents matching a query
-func (s *marketplaceService) SearchAgents(ctx context.Context, query string) ([]types.Agent, error) {
-	if query == "" {
-		return nil, fmt.Errorf("search query cannot be empty")
-	}
-
-	query = strings.ToLower(strings.TrimSpace(query))
-
-	// Get all categories and search through them
-	categories, err := s.GetCategories(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get categories: %w", err)
-	}
-
-	var allAgents []types.Agent
-	for _, category := range categories {
-		agents, err := s.GetAgents(ctx, category.Slug)
-		if err != nil {
-			continue // Skip categories that fail
-		}
-		allAgents = append(allAgents, agents...)
-	}
-
-	// Filter agents based on query
-	var results []types.Agent
-	for _, agent := range allAgents {
-		if s.matchesQuery(agent, query) {
-			results = append(results, agent)
-		}
-	}
-
-	return results, nil
-}
-
 // GetAgentContent retrieves the full content/definition of an agent
 func (s *marketplaceService) GetAgentContent(ctx context.Context, agentID string) (string, error) {
 	agent, err := s.GetAgent(ctx, agentID)
@@ -296,29 +261,4 @@ func (s *marketplaceService) HealthCheck(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// matchesQuery checks if an agent matches the search query
-func (s *marketplaceService) matchesQuery(agent types.Agent, query string) bool {
-	searchFields := []string{
-		strings.ToLower(agent.Name),
-		strings.ToLower(agent.Description),
-		strings.ToLower(agent.Author),
-		strings.ToLower(agent.Category),
-	}
-
-	for _, field := range searchFields {
-		if strings.Contains(field, query) {
-			return true
-		}
-	}
-
-	// Check tags
-	for _, tag := range agent.Tags {
-		if strings.Contains(strings.ToLower(tag), query) {
-			return true
-		}
-	}
-
-	return false
 }

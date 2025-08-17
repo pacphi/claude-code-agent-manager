@@ -87,11 +87,6 @@ agent-manager marketplace list
 agent-manager marketplace list --category "Development"
 ```
 
-#### Search Agents
-```bash
-agent-manager marketplace search "python"
-agent-manager marketplace search "code review" --min-rating 4.0
-```
 
 #### Show Agent Details
 ```bash

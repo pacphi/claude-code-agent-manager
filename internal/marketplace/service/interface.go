@@ -23,7 +23,6 @@ type MarketplaceService interface {
 	// Agents
 	GetAgents(ctx context.Context, category string) ([]types.Agent, error)
 	GetAgent(ctx context.Context, agentID string) (*types.Agent, error)
-	SearchAgents(ctx context.Context, query string) ([]types.Agent, error)
 
 	// Content
 	GetAgentContent(ctx context.Context, agentID string) (string, error)
