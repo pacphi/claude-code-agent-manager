@@ -185,7 +185,7 @@ sources:
 
 **Type**: `string`
 **Required**: Yes
-**Values**: `github`, `git`, `local`
+**Values**: `github`, `git`, `local`, `subagents`
 
 Type of source.
 
@@ -319,6 +319,99 @@ sources:
       source: ~/my-agents
       target: .claude/agents/local
     watch: true
+```
+
+### Subagents Sources
+
+For marketplace integration with subagents.sh using `type: subagents`.
+
+**Requirements:** Chrome, Chromium, or a Chromium-based browser must be installed and accessible in your PATH.
+
+#### category
+
+**Type**: `string`
+**Optional**
+
+Filter agents by marketplace category.
+
+```yaml
+sources:
+  - name: development-agents
+    type: subagents
+    category: "Development"
+```
+
+#### cache
+
+**Type**: `object`
+**Optional**
+
+Caching configuration for marketplace data.
+
+```yaml
+cache:
+  enabled: true
+  ttl_hours: 1
+  max_size_mb: 50
+```
+
+##### enabled
+
+**Type**: `boolean`
+**Default**: `true`
+
+Whether to enable caching of marketplace data.
+
+##### ttl_hours
+
+**Type**: `integer`
+**Default**: `1`
+
+Cache time-to-live in hours.
+
+##### max_size_mb
+
+**Type**: `integer`
+**Default**: `50`
+
+Maximum cache size in megabytes.
+
+**Complete subagents source example:**
+
+```yaml
+sources:
+  - name: subagents-marketplace-all
+    enabled: true
+    type: subagents
+    paths:
+      target: ${settings.base_dir}/marketplace
+    cache:
+      enabled: true
+      ttl_hours: 1
+      max_size_mb: 50
+    filters:
+      include:
+        extensions: [".md"]
+      exclude:
+        patterns: [".*", "test-*"]
+```
+
+**Category-specific source example:**
+
+```yaml
+sources:
+  - name: development-agents
+    enabled: true
+    type: subagents
+    category: "Development"
+    paths:
+      target: .claude/agents/dev
+    filters:
+      include:
+        regex: ["^(code-reviewer|documentation-expert).*\\.md$"]
+    cache:
+      enabled: true
+      ttl_hours: 2
 ```
 
 ### Authentication
@@ -694,6 +787,16 @@ sources:
       include:
         extensions: [".md", ".yaml"]
     watch: true
+
+  # Marketplace source
+  - name: subagents-marketplace-all
+    enabled: true
+    type: subagents
+    paths:
+      target: ${settings.base_dir}/marketplace
+    cache:
+      enabled: true
+      ttl_hours: 1
 
 metadata:
   tracking_file: .claude/.installed-agents.json

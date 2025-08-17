@@ -83,7 +83,7 @@ The configuration supports variable substitution:
 ### Marketplace Integration (Optional)
 - **Chrome/Chromium/Brave browser** - Required for subagents.sh marketplace integration
   - Supported browsers: Google Chrome, Chromium, Chrome Canary, Microsoft Edge (Chromium-based), Brave Browser
-  - See [MARKETPLACE.md](MARKETPLACE.md) for installation instructions
+  - See [Usage Guide](docs/USAGE.md#marketplace-commands) for installation instructions
 
 ### Development (Optional)
 - **GitHub CLI (gh)** - Enhanced GitHub integration

@@ -118,9 +118,8 @@ internal/
 
 - **[Prerequisites Guide](docs/PREREQUISITES.md)**: Complete setup requirements and installation instructions
 - **[Build Guide](docs/BUILD.md)**: Build and installation instructions
-- **[Usage Guide](docs/USAGE.md)**: Detailed command examples and workflows
+- **[Usage Guide](docs/USAGE.md)**: Detailed command examples, workflows, and marketplace integration
 - **[Configuration Reference](docs/CONFIG.md)**: Complete YAML configuration documentation
-- **[Marketplace Guide](docs/MARKETPLACE.md)**: Browser-based marketplace integration
 - **[Release Guide](docs/RELEASE.md)**: Release process and version management
 
 ## Configuration Examples
