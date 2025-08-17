@@ -4,16 +4,26 @@ This guide covers how to build, install, and develop Agent Manager.
 
 ## Prerequisites
 
-### Required Tools
+📋 **[Complete Prerequisites Guide](PREREQUISITES.md)** - Detailed requirements, installation instructions, and verification scripts
 
-- **Go 1.24.6 or later**: Download from [golang.org](https://golang.org/dl/)
-- **Git**: For version control and cloning repositories
-- **Make** (optional): For convenient build commands
+### Quick Check
 
-### Optional Tools
+Ensure you have these core requirements:
+- **Go 1.24.6+** - Download from [golang.org](https://golang.org/dl/)
+- **Git** - For version control operations
+- **Make** - For convenient build commands (recommended)
+- **Chrome/Chromium/Brave** - For marketplace features (optional)
 
-- **GitHub CLI (gh)**: For enhanced GitHub repository support
-- **golangci-lint**: For code linting during development
+### Verification
+
+```bash
+# Quick verification
+go version    # Should show 1.24.6+
+git --version
+make --version
+```
+
+For complete setup instructions including browser installation and troubleshooting, see [PREREQUISITES.md](PREREQUISITES.md).
 
 ## Quick Build
 

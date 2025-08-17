@@ -116,11 +116,12 @@ internal/
 
 ## Documentation
 
-- **[Build Guide](docs/BUILD.md)**: Comprehensive build and installation instructions
+- **[Prerequisites Guide](docs/PREREQUISITES.md)**: Complete setup requirements and installation instructions
+- **[Build Guide](docs/BUILD.md)**: Build and installation instructions
 - **[Usage Guide](docs/USAGE.md)**: Detailed command examples and workflows
 - **[Configuration Reference](docs/CONFIG.md)**: Complete YAML configuration documentation
+- **[Marketplace Guide](docs/MARKETPLACE.md)**: Browser-based marketplace integration
 - **[Release Guide](docs/RELEASE.md)**: Release process and version management
-- **[Architecture Overview](docs/README.md)**: Technical details and design decisions
 
 ## Configuration Examples
 
@@ -162,9 +163,18 @@ sources:
 
 ## Requirements
 
+**Quick Start**: Go 1.24.6+, Git, and optionally Chrome/Chromium/Brave for marketplace features.
+
+📋 **[Complete Prerequisites Guide](docs/PREREQUISITES.md)** - Detailed installation instructions and verification scripts
+
+### Core Requirements
 - **Go 1.24.6+**: For building Agent Manager
 - **Git**: For cloning repositories
-- **GitHub CLI** (optional): Enhanced GitHub integration
+
+### Optional Components
+- **Chrome/Chromium/Brave browser**: For marketplace functionality (subagents.sh integration)
+- **Make**: Convenient build commands
+- **GitHub CLI (gh)**: Enhanced GitHub integration
 
 ## Advanced Usage
 
@@ -213,7 +223,8 @@ This project is licensed under the MIT License. See LICENSE file for details.
 
 ## Support
 
-- Run `agent-manager --help` for command-line help
-- Use `agent-manager validate` to check your configuration
-- See the [Usage Guide](docs/USAGE.md) for detailed examples
-- Check the [Build Guide](docs/BUILD.md) for installation help
+- **Prerequisites**: See [Prerequisites Guide](docs/PREREQUISITES.md) for setup requirements
+- **Installation Help**: Check the [Build Guide](docs/BUILD.md) for installation help
+- **Command Help**: Run `agent-manager --help` for command-line help
+- **Configuration**: Use `agent-manager validate` to check your configuration
+- **Examples**: See the [Usage Guide](docs/USAGE.md) for detailed examples

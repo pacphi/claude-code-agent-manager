@@ -9,51 +9,69 @@ The marketplace integration allows users to browse, search, and install agents d
 ## Requirements
 
 ### System Requirements
+
 - **Chrome or Chromium browser** must be installed and accessible in your PATH
 - Supported browsers:
   - Google Chrome
   - Chromium
   - Chrome Canary
   - Microsoft Edge (Chromium-based)
+  - Brave Browser
 
 ### Installation Options
 
 #### macOS
+
 ```bash
 # Via Homebrew
 brew install --cask google-chrome
 # or
 brew install chromium
+# or
+brew install --cask brave-browser
 
-# Via direct download from Google
-# Download from https://www.google.com/chrome/
+# Via direct download
+# https://www.google.com/chrome/
+# https://brave.com/
 ```
 
 #### Linux
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get update
 sudo apt-get install google-chrome-stable
 # or
 sudo apt-get install chromium-browser
+# or
+sudo snap install brave
 
 # CentOS/RHEL/Fedora
 sudo yum install google-chrome-stable
 # or
 sudo dnf install chromium
+# or
+sudo dnf install brave-browser
 ```
 
 #### Windows
+
 ```cmd
 # Via Chocolatey
 choco install googlechrome
 # or
 choco install chromium
+# or
+choco install brave
 
 # Via Scoop
 scoop install googlechrome
 # or
 scoop install chromium
+# or
+scoop install brave
+
+# Alternative: Download directly from vendors
 ```
 
 ## Usage
@@ -78,22 +96,26 @@ sources:
 ### CLI Commands
 
 #### List Categories
+
 ```bash
 agent-manager marketplace list
 ```
 
 #### List Agents in a Category
+
 ```bash
 agent-manager marketplace list --category "Development"
 ```
 
 
 #### Show Agent Details
+
 ```bash
 agent-manager marketplace show "code-reviewer"
 ```
 
 #### Refresh Cache
+
 ```bash
 agent-manager marketplace refresh
 ```
@@ -116,6 +138,7 @@ sources:
 ```
 
 Then run:
+
 ```bash
 agent-manager install
 ```
@@ -123,6 +146,7 @@ agent-manager install
 ## Architecture
 
 ### Browser Automation
+
 The marketplace integration uses [chromedp](https://github.com/chromedp/chromedp) for browser automation to handle the JavaScript-rendered content on subagents.sh. This approach:
 
 - Executes JavaScript to render the full page content
@@ -131,12 +155,15 @@ The marketplace integration uses [chromedp](https://github.com/chromedp/chromedp
 - Provides robust scraping of modern web applications
 
 ### Caching
+
 The scraper includes intelligent caching to minimize API calls:
+
 - Configurable TTL (time-to-live) for cached data
 - Memory-efficient storage using Ristretto cache
 - Cache invalidation and refresh capabilities
 
 ### Error Handling
+
 - Graceful degradation when Chrome/Chromium is not available
 - Fallback content generation for agents without accessible content
 - Comprehensive logging for debugging scraping issues
@@ -144,10 +171,13 @@ The scraper includes intelligent caching to minimize API calls:
 ## Troubleshooting
 
 ### "executable file not found in $PATH"
+
 This error indicates Chrome/Chromium is not installed or not in your PATH. Install a supported browser using the installation options above.
 
 ### "context deadline exceeded"
+
 This typically indicates:
+
 - Slow network connection to subagents.sh
 - JavaScript taking longer than expected to load
 - Browser startup issues
@@ -155,7 +185,9 @@ This typically indicates:
 Try increasing the timeout or checking your network connection.
 
 ### "No categories found" or "No agents found"
+
 This may indicate:
+
 - Changes to the subagents.sh website structure
 - JavaScript failing to execute properly
 - Browser automation issues
@@ -165,6 +197,7 @@ Check the logs for detailed error messages and consider refreshing the cache.
 ## Development
 
 ### Testing
+
 The marketplace integration includes comprehensive unit tests, but integration tests require a Chrome/Chromium installation. To run tests:
 
 ```bash
@@ -172,6 +205,7 @@ make test
 ```
 
 ### Debugging
+
 Enable verbose logging to see detailed browser automation logs:
 
 ```bash
@@ -179,6 +213,7 @@ agent-manager marketplace list --verbose
 ```
 
 ### Contributing
+
 When contributing to the marketplace integration:
 
 1. Ensure changes work with headless Chrome
