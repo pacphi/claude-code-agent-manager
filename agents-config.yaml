@@ -74,14 +74,13 @@ sources:
         extensions: [".md"]
 
   - name: subagents-marketplace-all
-    enabled: true
+    enabled: false
     type: subagents
     paths:
       target: ${settings.base_dir}/marketplace
     cache:
       enabled: true
       ttl_hours: 1
-      max_size_mb: 50
 
   # Example: Custom agents from another repository
   # - name: custom-agents
