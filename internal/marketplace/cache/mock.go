@@ -8,20 +8,24 @@ import (
 type MockManager struct {
 	mu sync.RWMutex
 
-	categories  map[string]interface{}
-	agents      map[string]interface{}
-	singleAgent map[string]interface{}
+	categories      map[string]interface{}
+	agents          map[string]interface{}
+	singleAgent     map[string]interface{}
+	agentCategories map[string]string
 
 	// Call tracking
-	GetCategoriesCalls int
-	SetCategoriesCalls int
-	GetAgentsCalls     []string
-	SetAgentsCalls     []string
-	GetAgentCalls      []string
-	SetAgentCalls      []string
-	ClearCalls         int
-	IsExpiredCalls     []string
-	SizeCalls          int
+	GetCategoriesCalls    int
+	SetCategoriesCalls    int
+	GetAgentsCalls        []string
+	SetAgentsCalls        []string
+	GetAgentCalls         []string
+	SetAgentCalls         []string
+	GetAgentCategoryCalls []string
+	SetAgentCategoryCalls []string
+	ClearCalls            int
+	IsExpiredCalls        []string
+	SizeCalls             int
+	GetStatsCalls         int
 
 	// Configuration
 	shouldExpire bool
@@ -31,14 +35,17 @@ type MockManager struct {
 // NewMockManager creates a new mock cache manager
 func NewMockManager() *MockManager {
 	return &MockManager{
-		categories:     make(map[string]interface{}),
-		agents:         make(map[string]interface{}),
-		singleAgent:    make(map[string]interface{}),
-		GetAgentsCalls: make([]string, 0),
-		SetAgentsCalls: make([]string, 0),
-		GetAgentCalls:  make([]string, 0),
-		SetAgentCalls:  make([]string, 0),
-		IsExpiredCalls: make([]string, 0),
+		categories:            make(map[string]interface{}),
+		agents:                make(map[string]interface{}),
+		singleAgent:           make(map[string]interface{}),
+		agentCategories:       make(map[string]string),
+		GetAgentsCalls:        make([]string, 0),
+		SetAgentsCalls:        make([]string, 0),
+		GetAgentCalls:         make([]string, 0),
+		SetAgentCalls:         make([]string, 0),
+		GetAgentCategoryCalls: make([]string, 0),
+		SetAgentCategoryCalls: make([]string, 0),
+		IsExpiredCalls:        make([]string, 0),
 	}
 }
 
@@ -132,6 +139,36 @@ func (m *MockManager) SetAgent(agentID string, agent interface{}) {
 	}
 }
 
+// GetAgentCategory retrieves the cached category for an agent
+func (m *MockManager) GetAgentCategory(agentID string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.GetAgentCategoryCalls = append(m.GetAgentCategoryCalls, agentID)
+
+	if m.disabled || m.shouldExpire {
+		return ""
+	}
+
+	if category, exists := m.agentCategories[agentID]; exists {
+		return category
+	}
+
+	return ""
+}
+
+// SetAgentCategory caches the category for an agent
+func (m *MockManager) SetAgentCategory(agentID string, category string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.SetAgentCategoryCalls = append(m.SetAgentCategoryCalls, agentID)
+
+	if !m.disabled {
+		m.agentCategories[agentID] = category
+	}
+}
+
 // Clear removes all cached data
 func (m *MockManager) Clear() {
 	m.mu.Lock()
@@ -142,6 +179,7 @@ func (m *MockManager) Clear() {
 	m.categories = make(map[string]interface{})
 	m.agents = make(map[string]interface{})
 	m.singleAgent = make(map[string]interface{})
+	m.agentCategories = make(map[string]string)
 }
 
 // IsExpired checks if a cache key is expired
@@ -161,7 +199,26 @@ func (m *MockManager) Size() int {
 
 	m.SizeCalls++
 
-	return len(m.categories) + len(m.agents) + len(m.singleAgent)
+	return len(m.categories) + len(m.agents) + len(m.singleAgent) + len(m.agentCategories)
+}
+
+// GetStats returns cache performance statistics
+func (m *MockManager) GetStats() CacheStats {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.GetStatsCalls++
+
+	// For mock, return simple stats
+	size := len(m.categories) + len(m.agents) + len(m.singleAgent) + len(m.agentCategories)
+
+	return CacheStats{
+		Hits:      100, // Mock values
+		Misses:    10,
+		Evictions: 0,
+		Size:      size,
+		HitRate:   0.9,
+	}
 }
 
 // SetExpired configures whether items should be considered expired
@@ -186,15 +243,18 @@ func (m *MockManager) GetCallCounts() map[string]int {
 	defer m.mu.RUnlock()
 
 	return map[string]int{
-		"GetCategories": m.GetCategoriesCalls,
-		"SetCategories": m.SetCategoriesCalls,
-		"GetAgents":     len(m.GetAgentsCalls),
-		"SetAgents":     len(m.SetAgentsCalls),
-		"GetAgent":      len(m.GetAgentCalls),
-		"SetAgent":      len(m.SetAgentCalls),
-		"Clear":         m.ClearCalls,
-		"IsExpired":     len(m.IsExpiredCalls),
-		"Size":          m.SizeCalls,
+		"GetCategories":    m.GetCategoriesCalls,
+		"SetCategories":    m.SetCategoriesCalls,
+		"GetAgents":        len(m.GetAgentsCalls),
+		"SetAgents":        len(m.SetAgentsCalls),
+		"GetAgent":         len(m.GetAgentCalls),
+		"SetAgent":         len(m.SetAgentCalls),
+		"GetAgentCategory": len(m.GetAgentCategoryCalls),
+		"SetAgentCategory": len(m.SetAgentCategoryCalls),
+		"Clear":            m.ClearCalls,
+		"IsExpired":        len(m.IsExpiredCalls),
+		"Size":             m.SizeCalls,
+		"GetStats":         m.GetStatsCalls,
 	}
 }
 
@@ -207,6 +267,7 @@ func (m *MockManager) Reset() {
 	m.categories = make(map[string]interface{})
 	m.agents = make(map[string]interface{})
 	m.singleAgent = make(map[string]interface{})
+	m.agentCategories = make(map[string]string)
 
 	// Reset call tracking
 	m.GetCategoriesCalls = 0
@@ -215,9 +276,12 @@ func (m *MockManager) Reset() {
 	m.SetAgentsCalls = make([]string, 0)
 	m.GetAgentCalls = make([]string, 0)
 	m.SetAgentCalls = make([]string, 0)
+	m.GetAgentCategoryCalls = make([]string, 0)
+	m.SetAgentCategoryCalls = make([]string, 0)
 	m.ClearCalls = 0
 	m.IsExpiredCalls = make([]string, 0)
 	m.SizeCalls = 0
+	m.GetStatsCalls = 0
 
 	// Reset configuration
 	m.shouldExpire = false

@@ -17,10 +17,24 @@ type Manager interface {
 	GetAgent(agentID string) interface{}
 	SetAgent(agentID string, agent interface{})
 
+	// Agent-to-category mapping for fast lookups
+	GetAgentCategory(agentID string) string
+	SetAgentCategory(agentID string, category string)
+
 	// General operations
 	Clear()
 	IsExpired(key string) bool
 	Size() int
+	GetStats() CacheStats
+}
+
+// CacheStats holds cache performance metrics
+type CacheStats struct {
+	Hits      int64
+	Misses    int64
+	Evictions int64
+	Size      int
+	HitRate   float64
 }
 
 // Config holds cache configuration

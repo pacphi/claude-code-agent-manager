@@ -30,6 +30,7 @@ type MarketplaceService interface {
 	// Cache management
 	RefreshCache(ctx context.Context) error
 	ClearCache() error
+	GetCacheStats() interface{} // Returns cache.CacheStats
 
 	// Health
 	HealthCheck(ctx context.Context) error

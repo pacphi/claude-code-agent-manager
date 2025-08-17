@@ -95,6 +95,7 @@ func (s *marketplaceService) GetCategories(ctx context.Context) ([]types.Categor
 	// Cache results
 	if s.config.CacheEnabled {
 		s.cache.SetCategories(categories)
+		util.DebugPrintf("Cached %d categories\n", len(categories))
 	}
 
 	return categories, nil
@@ -110,9 +111,11 @@ func (s *marketplaceService) GetAgents(ctx context.Context, category string) ([]
 	if s.config.CacheEnabled {
 		if cached := s.cache.GetAgents(category); cached != nil {
 			if agents, ok := cached.([]types.Agent); ok {
+				util.DebugPrintf("Cache hit: returning %d agents for category %s\n", len(agents), category)
 				return agents, nil
 			}
 		}
+		util.DebugPrintf("Cache miss: fetching agents for category %s\n", category)
 	}
 
 	// Fetch agents with progress
@@ -139,9 +142,21 @@ func (s *marketplaceService) GetAgents(ctx context.Context, category string) ([]
 		return nil, err
 	}
 
-	// Cache results
+	// Cache results and populate individual agent cache + category mappings
 	if s.config.CacheEnabled {
 		s.cache.SetAgents(category, agents)
+
+		// Warm individual agent cache and category mappings
+		for _, agent := range agents {
+			s.cache.SetAgent(agent.ID, &agent)
+			s.cache.SetAgentCategory(agent.ID, category)
+			// Also cache by slug if different from ID
+			if agent.Slug != agent.ID {
+				s.cache.SetAgent(agent.Slug, &agent)
+				s.cache.SetAgentCategory(agent.Slug, category)
+			}
+		}
+		util.DebugPrintf("Warmed cache with %d individual agents from category %s\n", len(agents), category)
 	}
 
 	return agents, nil
@@ -157,13 +172,31 @@ func (s *marketplaceService) GetAgent(ctx context.Context, agentID string) (*typ
 	if s.config.CacheEnabled {
 		if cached := s.cache.GetAgent(agentID); cached != nil {
 			if agent, ok := cached.(*types.Agent); ok {
+				util.DebugPrintf("Cache hit: found agent %s directly\n", agentID)
 				return agent, nil
+			}
+		}
+
+		// Check if we know which category this agent belongs to
+		if category := s.cache.GetAgentCategory(agentID); category != "" {
+			util.DebugPrintf("Cache optimization: found cached category %s for agent %s, searching directly\n", category, agentID)
+			agents, err := s.GetAgents(ctx, category)
+			if err == nil {
+				for _, agent := range agents {
+					if agent.ID == agentID || agent.Slug == agentID {
+						// Cache the agent since GetAgents would have populated category agents but not individual agent
+						s.cache.SetAgent(agentID, &agent)
+						util.DebugPrintf("Cache optimization: found agent %s in predicted category %s\n", agentID, category)
+						return &agent, nil
+					}
+				}
 			}
 		}
 	}
 
-	// For now, search through all categories to find the agent
-	// TODO: Implement direct agent lookup when API supports it
+	util.DebugPrintf("No cached data for agent %s, searching all categories\n", agentID)
+
+	// Fall back to searching through all categories
 	categories, err := s.GetCategories(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get categories: %w", err)
@@ -177,9 +210,14 @@ func (s *marketplaceService) GetAgent(ctx context.Context, agentID string) (*typ
 
 		for _, agent := range agents {
 			if agent.ID == agentID || agent.Slug == agentID {
-				// Cache the agent
+				// Cache the agent and its category mapping
 				if s.config.CacheEnabled {
 					s.cache.SetAgent(agentID, &agent)
+					s.cache.SetAgentCategory(agentID, category.Slug)
+					// Also cache by slug if different from ID
+					if agent.Slug != agent.ID {
+						s.cache.SetAgentCategory(agent.Slug, category.Slug)
+					}
 				}
 				return &agent, nil
 			}
@@ -251,6 +289,11 @@ func (s *marketplaceService) RefreshCache(ctx context.Context) error {
 func (s *marketplaceService) ClearCache() error {
 	s.cache.Clear()
 	return nil
+}
+
+// GetCacheStats returns cache performance statistics
+func (s *marketplaceService) GetCacheStats() interface{} {
+	return s.cache.GetStats()
 }
 
 // HealthCheck verifies the service is operational
