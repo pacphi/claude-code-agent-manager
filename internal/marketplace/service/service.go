@@ -295,19 +295,19 @@ func (s *marketplaceService) findAgentDetailURL(ctx context.Context, agentName s
 (function() {
 	const targetAgentName = %q;
 	console.log('Searching for agent to click:', targetAgentName);
-	
+
 	// Strategy 1: Look for heading elements containing the agent name
 	const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
 	for (const heading of headings) {
 		if (heading.textContent && heading.textContent.trim().toLowerCase() === targetAgentName.toLowerCase()) {
 			console.log('Found agent heading:', heading.textContent);
-			
+
 			// Look for clickable parent containers
 			let parent = heading.parentElement;
 			let depth = 0;
 			while (parent && depth < 5) {
-				if (parent.style.cursor === 'pointer' || 
-					parent.onclick || 
+				if (parent.style.cursor === 'pointer' ||
+					parent.onclick ||
 					parent.classList.contains('cursor-pointer') ||
 					parent.getAttribute('role') === 'button') {
 					console.log('Found clickable parent container at depth', depth);
@@ -317,29 +317,29 @@ func (s *marketplaceService) findAgentDetailURL(ctx context.Context, agentName s
 				parent = parent.parentElement;
 				depth++;
 			}
-			
+
 			// If no clickable parent, try clicking the heading itself
 			console.log('Trying to click heading directly');
 			heading.click();
 			return 'CLICKED';
 		}
 	}
-	
+
 	// Strategy 2: Look for View buttons and find the one in the same container as the agent name
-	const viewButtons = Array.from(document.querySelectorAll('button')).filter(btn => 
+	const viewButtons = Array.from(document.querySelectorAll('button')).filter(btn =>
 		btn.textContent && btn.textContent.trim() === 'View'
 	);
-	
+
 	for (const viewButton of viewButtons) {
 		let container = viewButton;
 		let depth = 0;
-		
+
 		// Walk up to find the agent card container
 		while (container && depth < 10) {
 			container = container.parentElement;
 			depth++;
-			
-			if (container && container.textContent && 
+
+			if (container && container.textContent &&
 				container.textContent.toLowerCase().includes(targetAgentName.toLowerCase())) {
 				console.log('Found agent container via View button');
 				viewButton.click();
@@ -347,7 +347,7 @@ func (s *marketplaceService) findAgentDetailURL(ctx context.Context, agentName s
 			}
 		}
 	}
-	
+
 	console.log('No clickable agent card found');
 	return null;
 })();`, agentName)
