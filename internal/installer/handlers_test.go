@@ -11,9 +11,6 @@ import (
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace"
 )
 
-
-
-
 func TestSubagentsHandler_FormatAgentContent(t *testing.T) {
 	// Create handler struct directly without initializing container
 	handler := &SubagentsHandler{

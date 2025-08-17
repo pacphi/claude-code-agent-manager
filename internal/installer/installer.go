@@ -9,6 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/pacphi/claude-code-agent-manager/internal/conflict"
+	"github.com/pacphi/claude-code-agent-manager/internal/progress"
 	"github.com/pacphi/claude-code-agent-manager/internal/tracker"
 	"github.com/pacphi/claude-code-agent-manager/internal/transformer"
 	"github.com/pacphi/claude-code-agent-manager/internal/util"
@@ -45,37 +46,14 @@ func (i *Installer) InstallSource(source config.Source) error {
 		color.Yellow("[DRY RUN] Would install from source: %s\n", source.Name)
 	}
 
-	// Create temporary directory for cloning/copying
-	tempDir, err := os.MkdirTemp("", "agent-install-*")
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %w", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			// Log error but don't fail the entire operation
-			if i.options.Verbose {
-				fmt.Printf("Warning: failed to remove temp directory %s: %v\n", tempDir, err)
-			}
-		}
-	}()
-
-	// Get source handler based on type
-	handler, err := i.getSourceHandler(source.Type)
+	// Create temporary directory and fetch source
+	fetchedPath, commit, tempDir, err := i.fetchSource(source)
 	if err != nil {
 		return err
 	}
+	defer i.cleanupTempDir(tempDir)
 
-	// Fetch source to temp directory
-	if i.options.Verbose {
-		fmt.Printf("Fetching source %s...\n", source.Name)
-	}
-
-	fetchedPath, commit, err := handler.Fetch(source, tempDir)
-	if err != nil {
-		return fmt.Errorf("failed to fetch source: %w", err)
-	}
-
-	// Apply filters
+	// Apply filters and get files
 	files, err := i.applyFilters(fetchedPath, source.Filters)
 	if err != nil {
 		return fmt.Errorf("failed to apply filters: %w", err)
@@ -86,7 +64,7 @@ func (i *Installer) InstallSource(source config.Source) error {
 		return nil
 	}
 
-	// Prepare installation
+	// Prepare installation tracking
 	installation := tracker.Installation{
 		SourceCommit:  commit,
 		Files:         make(map[string]tracker.FileInfo),
@@ -94,13 +72,77 @@ func (i *Installer) InstallSource(source config.Source) error {
 		DocsGenerated: []string{},
 	}
 
-	// Resolve target directory with variable substitution
+	// Apply transformations
+	transformedFiles, err := i.applyTransformations(source, files, fetchedPath, &installation)
+	if err != nil {
+		return err
+	}
+
+	// Install files
+	if err := i.installFiles(source, transformedFiles, fetchedPath, &installation); err != nil {
+		return err
+	}
+
+	// Run post-install actions
+	if err := i.runPostInstallActions(source); err != nil {
+		return err
+	}
+
+	// Save installation tracking
+	if !i.options.DryRun {
+		if err := i.tracker.RecordInstallation(source.Name, installation); err != nil {
+			return fmt.Errorf("failed to record installation: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// fetchSource creates temp directory and fetches source content
+func (i *Installer) fetchSource(source config.Source) (string, string, string, error) {
+	// Create temporary directory for cloning/copying
+	tempDir, err := os.MkdirTemp("", "agent-install-*")
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	// Get source handler based on type
+	handler, err := i.getSourceHandler(source.Type)
+	if err != nil {
+		return "", "", tempDir, err
+	}
+
+	// Fetch source to temp directory
+	if i.options.Verbose {
+		fmt.Printf("Fetching source %s...\n", source.Name)
+	}
+
+	fetchedPath, commit, err := handler.Fetch(source, tempDir)
+	if err != nil {
+		return "", "", tempDir, fmt.Errorf("failed to fetch source: %w", err)
+	}
+
+	return fetchedPath, commit, tempDir, nil
+}
+
+// cleanupTempDir removes temporary directory
+func (i *Installer) cleanupTempDir(tempDir string) {
+	if err := os.RemoveAll(tempDir); err != nil {
+		// Log error but don't fail the entire operation
+		if i.options.Verbose {
+			fmt.Printf("Warning: failed to remove temp directory %s: %v\n", tempDir, err)
+		}
+	}
+}
+
+// applyTransformations applies all transformations to files
+func (i *Installer) applyTransformations(source config.Source, files []string, fetchedPath string, installation *tracker.Installation) ([]string, error) {
 	targetDir := i.resolveTargetPath(source.Paths.Target)
 
 	// Create target directory if it doesn't exist
 	if !i.options.DryRun {
 		if err := os.MkdirAll(targetDir, 0750); err != nil {
-			return fmt.Errorf("failed to create target directory: %w", err)
+			return nil, fmt.Errorf("failed to create target directory: %w", err)
 		}
 	}
 
@@ -116,7 +158,7 @@ func (i *Installer) InstallSource(source config.Source) error {
 		var err error
 		transformedFiles, err = trans.Apply(transformedFiles, transform, fetchedPath, targetDir)
 		if err != nil {
-			return fmt.Errorf("transformation failed: %w", err)
+			return nil, fmt.Errorf("transformation failed: %w", err)
 		}
 
 		// Track generated docs
@@ -129,69 +171,101 @@ func (i *Installer) InstallSource(source config.Source) error {
 		}
 	}
 
-	// Copy files to target with conflict resolution
+	return transformedFiles, nil
+}
+
+// installFiles copies files to target with conflict resolution
+func (i *Installer) installFiles(source config.Source, transformedFiles []string, fetchedPath string, installation *tracker.Installation) error {
+	targetDir := i.resolveTargetPath(source.Paths.Target)
+
+	// Get conflict strategy
 	conflictStrategy := source.ConflictStrategy
 	if conflictStrategy == "" {
 		conflictStrategy = i.config.Settings.ConflictStrategy
 	}
 
+	// Set up progress for file operations
+	pm := progress.Default()
+	progressID := fmt.Sprintf("install-%s", source.Name)
+	if !i.options.Verbose && len(transformedFiles) > 1 {
+		pm.StartProgress(progressID, fmt.Sprintf("Installing %s files", source.Name), len(transformedFiles))
+		defer pm.FinishProgress(progressID, true, "")
+	}
+
 	for _, relPath := range transformedFiles {
-		srcPath := filepath.Join(fetchedPath, relPath)
-		dstPath := filepath.Join(targetDir, relPath)
-
-		if !i.options.DryRun {
-			// Check if file already exists (pre-existing)
-			var wasPreExisting bool
-			if _, err := os.Stat(dstPath); err == nil {
-				wasPreExisting = true
-				// File exists, resolve conflict
-				resolved, err := i.resolver.Resolve(dstPath, srcPath, conflictStrategy)
-				if err != nil {
-					return fmt.Errorf("conflict resolution failed for %s: %w", dstPath, err)
-				}
-				if !resolved {
-					if i.options.Verbose {
-						fmt.Printf("Skipped: %s\n", dstPath)
-					}
-					continue
-				}
-			}
-
-			// Ensure parent directory exists
-			if err := os.MkdirAll(filepath.Dir(dstPath), 0750); err != nil {
-				return fmt.Errorf("failed to create directory: %w", err)
-			}
-
-			// Copy file
-			if err := i.copyFile(srcPath, dstPath); err != nil {
-				return fmt.Errorf("failed to copy %s: %w", relPath, err)
-			}
-
-			// Track installed file
-			info, err := os.Stat(dstPath)
-			if err != nil {
-				return fmt.Errorf("failed to stat installed file %s: %w", dstPath, err)
-			}
-			installation.Files[dstPath] = tracker.FileInfo{
-				Path:           dstPath,
-				Size:           info.Size(),
-				Modified:       info.ModTime(),
-				WasPreExisting: wasPreExisting,
-			}
-
-			// Track directory
-			dir := filepath.Dir(dstPath)
-			if !contains(installation.Directories, dir) {
-				installation.Directories = append(installation.Directories, dir)
-			}
+		if err := i.installSingleFile(relPath, fetchedPath, targetDir, conflictStrategy, installation); err != nil {
+			return err
 		}
 
 		if i.options.Verbose {
+			dstPath := filepath.Join(targetDir, relPath)
 			fmt.Printf("Installed: %s\n", dstPath)
+		} else if !i.options.DryRun && len(transformedFiles) > 1 {
+			// Update progress bar
+			pm.UpdateProgress(progressID, 1)
 		}
 	}
 
-	// Run post-install actions
+	return nil
+}
+
+// installSingleFile handles installation of a single file
+func (i *Installer) installSingleFile(relPath, fetchedPath, targetDir, conflictStrategy string, installation *tracker.Installation) error {
+	srcPath := filepath.Join(fetchedPath, relPath)
+	dstPath := filepath.Join(targetDir, relPath)
+
+	if !i.options.DryRun {
+		// Check if file already exists (pre-existing)
+		var wasPreExisting bool
+		if _, err := os.Stat(dstPath); err == nil {
+			wasPreExisting = true
+			// File exists, resolve conflict
+			resolved, err := i.resolver.Resolve(dstPath, srcPath, conflictStrategy)
+			if err != nil {
+				return fmt.Errorf("conflict resolution failed for %s: %w", dstPath, err)
+			}
+			if !resolved {
+				if i.options.Verbose {
+					fmt.Printf("Skipped: %s\n", dstPath)
+				}
+				return nil
+			}
+		}
+
+		// Ensure parent directory exists
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0750); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		// Copy file
+		if err := i.copyFile(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy %s: %w", relPath, err)
+		}
+
+		// Track installed file
+		info, err := os.Stat(dstPath)
+		if err != nil {
+			return fmt.Errorf("failed to stat installed file %s: %w", dstPath, err)
+		}
+		installation.Files[dstPath] = tracker.FileInfo{
+			Path:           dstPath,
+			Size:           info.Size(),
+			Modified:       info.ModTime(),
+			WasPreExisting: wasPreExisting,
+		}
+
+		// Track directory
+		dir := filepath.Dir(dstPath)
+		if !contains(installation.Directories, dir) {
+			installation.Directories = append(installation.Directories, dir)
+		}
+	}
+
+	return nil
+}
+
+// runPostInstallActions executes post-install actions
+func (i *Installer) runPostInstallActions(source config.Source) error {
 	for _, action := range source.PostInstall {
 		if i.options.Verbose {
 			fmt.Printf("Running post-install: %s\n", action.Path)
@@ -206,14 +280,6 @@ func (i *Installer) InstallSource(source config.Source) error {
 			}
 		}
 	}
-
-	// Save installation tracking
-	if !i.options.DryRun {
-		if err := i.tracker.RecordInstallation(source.Name, installation); err != nil {
-			return fmt.Errorf("failed to record installation: %w", err)
-		}
-	}
-
 	return nil
 }
 

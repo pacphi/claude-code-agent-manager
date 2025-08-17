@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace"
+	"github.com/pacphi/claude-code-agent-manager/internal/progress"
 	"github.com/pacphi/claude-code-agent-manager/internal/util"
 )
 
@@ -155,7 +156,7 @@ func (g *GitHandler) Fetch(source config.Source, destDir string) (string, string
 	// Clone options
 	cloneOpts := &git.CloneOptions{
 		URL:      source.URL,
-		Progress: nil,
+		Progress: nil, // Could set to os.Stdout for git progress, but we're using our own progress
 	}
 
 	// Set branch
@@ -506,10 +507,20 @@ func (s *SubagentsHandler) Fetch(source config.Source, destDir string) (string, 
 	}
 
 	// Download all agent content
+	pm := progress.Default()
+	progressID := fmt.Sprintf("subagents-%s", source.Name)
+	if len(agents) > 1 {
+		pm.StartProgress(progressID, "Downloading marketplace agents", len(agents))
+		defer pm.FinishProgress(progressID, true, "")
+	}
+
 	for _, agent := range agents {
 		content, err := s.container.Service.GetAgentContent(ctx, agent.ID)
 		if err != nil {
 			fmt.Printf("Warning: failed to get content for %s: %v\n", agent.Name, err)
+			if len(agents) > 1 {
+				pm.UpdateProgress(progressID, 1)
+			}
 			continue
 		}
 
@@ -522,6 +533,10 @@ func (s *SubagentsHandler) Fetch(source config.Source, destDir string) (string, 
 
 		if err := os.WriteFile(agentPath, []byte(formattedContent), 0644); err != nil {
 			return "", "", fmt.Errorf("failed to write agent %s: %w", agent.Name, err)
+		}
+
+		if len(agents) > 1 {
+			pm.UpdateProgress(progressID, 1)
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/pacphi/claude-code-agent-manager/internal/conflict"
 	"github.com/pacphi/claude-code-agent-manager/internal/installer"
+	"github.com/pacphi/claude-code-agent-manager/internal/progress"
 	"github.com/pacphi/claude-code-agent-manager/internal/tracker"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,7 @@ var (
 	verbose    bool
 	dryRun     bool
 	noColor    bool
+	noProgress bool
 )
 
 var rootCmd = &cobra.Command{
@@ -30,6 +32,14 @@ Claude Code agents from various sources using YAML configuration.`,
 		if noColor {
 			color.NoColor = true
 		}
+
+		// Initialize progress manager
+		progress.Initialize(progress.Options{
+			Enabled: !noProgress,
+			Verbose: verbose,
+			DryRun:  dryRun,
+			NoColor: noColor,
+		})
 	},
 }
 
@@ -106,6 +116,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "simulate actions without making changes")
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable colored output")
+	rootCmd.PersistentFlags().BoolVar(&noProgress, "no-progress", false, "disable progress indicators")
 
 	installCmd.Flags().StringP("source", "s", "", "install specific source only")
 	rootCmd.AddCommand(installCmd)
@@ -137,12 +148,24 @@ func main() {
 }
 
 func runInstall(sourceName string) error {
-	cfg, err := config.Load(configFile)
+	pm := progress.Default()
+
+	// Show progress for loading configuration
+	var cfg *config.Config
+	err := pm.WithSpinner("Loading configuration", func() error {
+		var loadErr error
+		cfg, loadErr = config.Load(configFile)
+		return loadErr
+	})
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if err := config.Validate(cfg); err != nil {
+	// Show progress for validation
+	err = pm.WithSpinner("Validating configuration", func() error {
+		return config.Validate(cfg)
+	})
+	if err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
@@ -182,17 +205,35 @@ func runInstall(sourceName string) error {
 			continue
 		}
 
-		color.Blue("Installing from source: %s\n", source.Name)
+		if !noProgress && !verbose {
+			// Use spinner for each source installation
+			err := pm.WithSpinner(fmt.Sprintf("Installing %s", source.Name), func() error {
+				return inst.InstallSource(source)
+			})
 
-		if err := inst.InstallSource(source); err != nil {
-			color.Red("Failed to install %s: %v\n", source.Name, err)
-			failCount++
-			if !cfg.Settings.ContinueOnError {
-				return err
+			if err != nil {
+				color.Red("Failed to install %s: %v\n", source.Name, err)
+				failCount++
+				if !cfg.Settings.ContinueOnError {
+					return err
+				}
+			} else {
+				successCount++
 			}
 		} else {
-			color.Green("✓ Successfully installed %s\n", source.Name)
-			successCount++
+			// Original behavior for verbose mode
+			color.Blue("Installing from source: %s\n", source.Name)
+
+			if err := inst.InstallSource(source); err != nil {
+				color.Red("Failed to install %s: %v\n", source.Name, err)
+				failCount++
+				if !cfg.Settings.ContinueOnError {
+					return err
+				}
+			} else {
+				color.Green("✓ Successfully installed %s\n", source.Name)
+				successCount++
+			}
 		}
 	}
 
@@ -207,7 +248,15 @@ func runInstall(sourceName string) error {
 }
 
 func runUninstall(sourceName string, all bool, keepBackups bool) error {
-	cfg, err := config.Load(configFile)
+	pm := progress.Default()
+
+	// Load configuration with progress
+	var cfg *config.Config
+	err := pm.WithSpinner("Loading configuration", func() error {
+		var loadErr error
+		cfg, loadErr = config.Load(configFile)
+		return loadErr
+	})
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -221,16 +270,34 @@ func runUninstall(sourceName string, all bool, keepBackups bool) error {
 	})
 
 	if all {
+		if !noProgress && !verbose {
+			return pm.WithSpinner("Uninstalling all sources", func() error {
+				return inst.UninstallAll()
+			})
+		}
 		color.Yellow("Uninstalling all sources...\n")
 		return inst.UninstallAll()
 	}
 
+	if !noProgress && !verbose {
+		return pm.WithSpinner(fmt.Sprintf("Uninstalling %s", sourceName), func() error {
+			return inst.UninstallSource(sourceName)
+		})
+	}
 	color.Yellow("Uninstalling source: %s\n", sourceName)
 	return inst.UninstallSource(sourceName)
 }
 
 func runUpdate(sourceName string, checkOnly bool) error {
-	cfg, err := config.Load(configFile)
+	pm := progress.Default()
+
+	// Load configuration with progress
+	var cfg *config.Config
+	err := pm.WithSpinner("Loading configuration", func() error {
+		var loadErr error
+		cfg, loadErr = config.Load(configFile)
+		return loadErr
+	})
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -243,6 +310,15 @@ func runUpdate(sourceName string, checkOnly bool) error {
 	})
 
 	if sourceName != "" {
+		if !noProgress && !verbose {
+			action := "Updating"
+			if checkOnly {
+				action = "Checking updates for"
+			}
+			return pm.WithSpinner(fmt.Sprintf("%s %s", action, sourceName), func() error {
+				return inst.UpdateSource(sourceName)
+			})
+		}
 		return inst.UpdateSource(sourceName)
 	}
 
@@ -252,11 +328,27 @@ func runUpdate(sourceName string, checkOnly bool) error {
 			continue
 		}
 
-		color.Blue("Checking updates for: %s\n", source.Name)
-		if err := inst.UpdateSource(source.Name); err != nil {
-			color.Red("Failed to update %s: %v\n", source.Name, err)
-			if !cfg.Settings.ContinueOnError {
-				return err
+		if !noProgress && !verbose {
+			action := "Updating"
+			if checkOnly {
+				action = "Checking updates for"
+			}
+			err := pm.WithSpinner(fmt.Sprintf("%s %s", action, source.Name), func() error {
+				return inst.UpdateSource(source.Name)
+			})
+			if err != nil {
+				color.Red("Failed to update %s: %v\n", source.Name, err)
+				if !cfg.Settings.ContinueOnError {
+					return err
+				}
+			}
+		} else {
+			color.Blue("Checking updates for: %s\n", source.Name)
+			if err := inst.UpdateSource(source.Name); err != nil {
+				color.Red("Failed to update %s: %v\n", source.Name, err)
+				if !cfg.Settings.ContinueOnError {
+					return err
+				}
 			}
 		}
 	}
@@ -265,15 +357,25 @@ func runUpdate(sourceName string, checkOnly bool) error {
 }
 
 func runList(sourceName string) error {
-	cfg, err := config.Load(configFile)
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
+	pm := progress.Default()
 
-	track := tracker.New(cfg.Metadata.TrackingFile)
-	installations, err := track.List()
+	// Load configuration and tracking data with progress
+	var cfg *config.Config
+	var installations map[string]*tracker.Installation
+
+	err := pm.WithSpinner("Loading configuration", func() error {
+		var loadErr error
+		cfg, loadErr = config.Load(configFile)
+		if loadErr != nil {
+			return loadErr
+		}
+
+		track := tracker.New(cfg.Metadata.TrackingFile)
+		installations, loadErr = track.List()
+		return loadErr
+	})
 	if err != nil {
-		return fmt.Errorf("failed to list installations: %w", err)
+		return fmt.Errorf("failed to load data: %w", err)
 	}
 
 	if sourceName != "" {
@@ -322,14 +424,30 @@ func printInstallation(name string, inst tracker.Installation) {
 }
 
 func runValidate() error {
-	cfg, err := config.Load(configFile)
+	pm := progress.Default()
+
+	var cfg *config.Config
+	var validationErr error
+
+	// Load and validate with progress
+	err := pm.WithSpinner("Validating configuration", func() error {
+		var loadErr error
+		cfg, loadErr = config.Load(configFile)
+		if loadErr != nil {
+			return loadErr
+		}
+
+		validationErr = config.Validate(cfg)
+		return nil
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if err := config.Validate(cfg); err != nil {
+	if validationErr != nil {
 		color.Red("✗ Configuration is invalid:\n")
-		return err
+		return validationErr
 	}
 
 	color.Green("✓ Configuration is valid\n")

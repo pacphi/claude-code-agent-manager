@@ -8,6 +8,7 @@ import (
 
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace/browser"
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace/cache"
+	"github.com/pacphi/claude-code-agent-manager/internal/progress"
 	"github.com/pacphi/claude-code-agent-manager/internal/types"
 	"github.com/pacphi/claude-code-agent-manager/internal/util"
 )
@@ -62,22 +63,33 @@ func (s *marketplaceService) GetCategories(ctx context.Context) ([]types.Categor
 	util.DebugPrintf("No cached categories, proceeding with extraction\n")
 
 	// Navigate to categories page where all categories are displayed with agent counts
-	categoriesURL := fmt.Sprintf("%s/categories", s.baseURL)
-	util.DebugPrintf("Navigating to: %s\n", categoriesURL)
-	if err := s.browser.Navigate(ctx, categoriesURL); err != nil {
-		util.DebugPrintf("Navigation failed: %v\n", err)
-		return nil, fmt.Errorf("failed to navigate to categories page: %w", err)
-	}
-	util.DebugPrintf("Navigation successful\n")
+	pm := progress.Default()
+	var categories []types.Category
 
-	// Extract categories from categories page (gets names and descriptions)
-	util.DebugPrintf("Starting category extraction\n")
-	categories, err := s.extractors.Categories.Extract(ctx, s.browser)
+	err := pm.WithSpinner("Fetching marketplace categories", func() error {
+		categoriesURL := fmt.Sprintf("%s/categories", s.baseURL)
+		util.DebugPrintf("Navigating to: %s\n", categoriesURL)
+		if err := s.browser.Navigate(ctx, categoriesURL); err != nil {
+			util.DebugPrintf("Navigation failed: %v\n", err)
+			return fmt.Errorf("failed to navigate to categories page: %w", err)
+		}
+		util.DebugPrintf("Navigation successful\n")
+
+		// Extract categories from categories page (gets names and descriptions)
+		util.DebugPrintf("Starting category extraction\n")
+		var extractErr error
+		categories, extractErr = s.extractors.Categories.Extract(ctx, s.browser)
+		if extractErr != nil {
+			util.DebugPrintf("Category extraction failed: %v\n", extractErr)
+			return fmt.Errorf("failed to extract categories: %w", extractErr)
+		}
+		util.DebugPrintf("Category extraction completed: %d categories\n", len(categories))
+		return nil
+	})
+
 	if err != nil {
-		util.DebugPrintf("Category extraction failed: %v\n", err)
-		return nil, fmt.Errorf("failed to extract categories: %w", err)
+		return nil, err
 	}
-	util.DebugPrintf("Category extraction completed: %d categories\n", len(categories))
 
 	// Categories extracted from /categories page include real agent counts
 
@@ -104,16 +116,28 @@ func (s *marketplaceService) GetAgents(ctx context.Context, category string) ([]
 		}
 	}
 
-	// Navigate to category page
-	categoryURL := fmt.Sprintf("%s/categories/%s", s.baseURL, category)
-	if err := s.browser.Navigate(ctx, categoryURL); err != nil {
-		return nil, fmt.Errorf("failed to navigate to category %s: %w", category, err)
-	}
+	// Fetch agents with progress
+	pm := progress.Default()
+	var agents []types.Agent
 
-	// Extract agents
-	agents, err := s.extractors.Agents.Extract(ctx, s.browser, category)
+	err := pm.WithSpinner(fmt.Sprintf("Fetching agents from %s", category), func() error {
+		// Navigate to category page
+		categoryURL := fmt.Sprintf("%s/categories/%s", s.baseURL, category)
+		if err := s.browser.Navigate(ctx, categoryURL); err != nil {
+			return fmt.Errorf("failed to navigate to category %s: %w", category, err)
+		}
+
+		// Extract agents
+		var extractErr error
+		agents, extractErr = s.extractors.Agents.Extract(ctx, s.browser, category)
+		if extractErr != nil {
+			return fmt.Errorf("failed to extract agents from category %s: %w", category, extractErr)
+		}
+		return nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract agents from category %s: %w", category, err)
+		return nil, err
 	}
 
 	// Cache results

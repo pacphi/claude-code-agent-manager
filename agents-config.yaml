@@ -12,7 +12,7 @@ settings:
 
 sources:
   - name: awesome-claude-code-subagents
-    enabled: false
+    enabled: true
     type: github
     repository: VoltAgent/awesome-claude-code-subagents
     branch: main
