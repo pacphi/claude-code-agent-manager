@@ -247,11 +247,9 @@ func (m *Manager) WithProgress(description string, total int, fn func(update fun
 	progressID := fmt.Sprintf("progress-%d", time.Now().UnixNano())
 	m.StartProgress(progressID, description, total)
 
-	updateFunc := func(increment int) {
+	err := fn(func(increment int) {
 		m.UpdateProgress(progressID, increment)
-	}
-
-	err := fn(updateFunc)
+	})
 
 	if err != nil {
 		m.FinishProgress(progressID, false, fmt.Sprintf("Failed: %s", description))
