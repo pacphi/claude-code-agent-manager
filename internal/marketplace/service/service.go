@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pacphi/claude-code-agent-manager/internal/marketplace/browser"
@@ -234,15 +235,36 @@ func (s *marketplaceService) GetAgentContent(ctx context.Context, agentID string
 		return "", err
 	}
 
-	if agent.ContentURL == "" {
-		return agent.Description, nil
+	// Determine the detail URL for content extraction
+	var detailURL string
+	if agent.ContentURL != "" &&
+		!strings.Contains(agent.ContentURL, "search?q=") &&
+		!strings.HasPrefix(agent.ContentURL, "NAVIGATE_TO:") {
+		detailURL = agent.ContentURL
+		util.DebugPrintf("Using stored ContentURL: %s\n", detailURL)
+	} else {
+		// Try to find the actual agent detail page URL by navigation
+		detailURL, err = s.findAgentDetailURL(ctx, agentID, agent.Name)
+		if err != nil {
+			util.DebugPrintf("Failed to find agent detail URL for %s: %v\n", agentID, err)
+			return agent.Description, nil
+		}
+
+		// Update the agent's ContentURL cache for future use
+		if detailURL != "" {
+			agent.ContentURL = detailURL
+			// Cache the updated agent
+			if s.config.CacheEnabled {
+				s.cache.SetAgent(agentID, agent)
+			}
+		}
 	}
 
 	// Use the content extractor to get the agent definition
-	content, err := s.extractors.Content.Extract(ctx, s.browser, agent.ContentURL)
+	content, err := s.extractors.Content.Extract(ctx, s.browser, detailURL)
 	if err != nil {
 		// Log the error but don't fail completely
-		util.DebugPrintf("Failed to extract content for agent %s: %v\n", agentID, err)
+		util.DebugPrintf("Failed to extract content for agent %s from URL %s: %v\n", agentID, detailURL, err)
 		// Fall back to description if content extraction fails
 		return agent.Description, nil
 	}
@@ -254,6 +276,108 @@ func (s *marketplaceService) GetAgentContent(ctx context.Context, agentID string
 	}
 
 	return content, nil
+}
+
+// findAgentDetailURL attempts to find the actual detail page URL for an agent
+func (s *marketplaceService) findAgentDetailURL(ctx context.Context, agentID, agentName string) (string, error) {
+	// Strategy 1: Navigate and click approach for agents page
+	agentsURL := fmt.Sprintf("%s/agents", s.baseURL)
+	if err := s.browser.Navigate(ctx, agentsURL); err != nil {
+		return "", fmt.Errorf("failed to navigate to agents page: %w", err)
+	}
+
+	// Wait for page to load
+	util.DebugPrintf("Waiting for agents page to load...\n")
+	time.Sleep(3 * time.Second)
+
+	// Execute a script to find and click the agent card
+	clickScript := fmt.Sprintf(`
+(function() {
+	const targetAgentName = %q;
+	console.log('Searching for agent to click:', targetAgentName);
+	
+	// Strategy 1: Look for heading elements containing the agent name
+	const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+	for (const heading of headings) {
+		if (heading.textContent && heading.textContent.trim().toLowerCase() === targetAgentName.toLowerCase()) {
+			console.log('Found agent heading:', heading.textContent);
+			
+			// Look for clickable parent containers
+			let parent = heading.parentElement;
+			let depth = 0;
+			while (parent && depth < 5) {
+				if (parent.style.cursor === 'pointer' || 
+					parent.onclick || 
+					parent.classList.contains('cursor-pointer') ||
+					parent.getAttribute('role') === 'button') {
+					console.log('Found clickable parent container at depth', depth);
+					parent.click();
+					return 'CLICKED';
+				}
+				parent = parent.parentElement;
+				depth++;
+			}
+			
+			// If no clickable parent, try clicking the heading itself
+			console.log('Trying to click heading directly');
+			heading.click();
+			return 'CLICKED';
+		}
+	}
+	
+	// Strategy 2: Look for View buttons and find the one in the same container as the agent name
+	const viewButtons = Array.from(document.querySelectorAll('button')).filter(btn => 
+		btn.textContent && btn.textContent.trim() === 'View'
+	);
+	
+	for (const viewButton of viewButtons) {
+		let container = viewButton;
+		let depth = 0;
+		
+		// Walk up to find the agent card container
+		while (container && depth < 10) {
+			container = container.parentElement;
+			depth++;
+			
+			if (container && container.textContent && 
+				container.textContent.toLowerCase().includes(targetAgentName.toLowerCase())) {
+				console.log('Found agent container via View button');
+				viewButton.click();
+				return 'CLICKED';
+			}
+		}
+	}
+	
+	console.log('No clickable agent card found');
+	return null;
+})();`, agentName)
+
+	result, err := s.browser.ExecuteScript(ctx, clickScript)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute click script: %w", err)
+	}
+
+	if result == "CLICKED" {
+		// Wait for navigation to complete
+		util.DebugPrintf("Waiting for navigation after click...\n")
+		time.Sleep(2 * time.Second)
+
+		// Get the current URL
+		getCurrentURLScript := `window.location.href`
+		urlResult, err := s.browser.ExecuteScript(ctx, getCurrentURLScript)
+		if err != nil {
+			return "", fmt.Errorf("failed to get current URL: %w", err)
+		}
+
+		if currentURL, ok := urlResult.(string); ok {
+			if currentURL != agentsURL && strings.Contains(currentURL, "/agents/") {
+				util.DebugPrintf("Successfully navigated to agent detail page: %s\n", currentURL)
+				return currentURL, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("agent detail URL not found for %s", agentName)
 }
 
 // RefreshCache clears and rebuilds the cache

@@ -209,32 +209,11 @@
 					}
 				}
 
-				// Strategy 5: Click simulation (last resort) - Note: This should be used carefully in automation
-				if (!url && index < 3) { // Limit to first 3 agents to avoid excessive navigation
-					console.log(`Attempting click simulation for agent: ${name}`);
-					try {
-						// Store current URL
-						const beforeClickUrl = window.location.href;
-
-						// Find clickable area - could be the entire container or View button
-						const clickTarget = viewButton.closest('[role="button"], button, a, [onclick]') || viewButton;
-
-						// Simulate click
-						clickTarget.click();
-
-						// Wait a short time for potential navigation
-						setTimeout(() => {
-							if (window.location.href !== beforeClickUrl && window.location.href.includes('/agents/')) {
-								url = window.location.href;
-								console.log(`Found agent URL via click simulation: ${url}`);
-
-								// Navigate back to original page
-								window.history.back();
-							}
-						}, 500);
-					} catch (e) {
-						console.log(`Click simulation failed for ${name}:`, e.message);
-					}
+				// Strategy 5: Simplified approach - mark for later navigation
+				if (!url && name) {
+					console.log(`Agent URL will be resolved via navigation for: ${name}`);
+					// Use a special marker that indicates navigation is needed
+					url = `NAVIGATE_TO:${name}`;
 				}
 
 				// Add the agent if we have valid data and haven't seen it before
