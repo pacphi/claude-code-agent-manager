@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/pacphi/claude-code-agent-manager/internal/cli"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/pacphi/claude-code-agent-manager/internal/conflict"
 	"github.com/pacphi/claude-code-agent-manager/internal/installer"
@@ -123,6 +124,9 @@ func init() {
 
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(versionCmd)
+
+	// Add marketplace command
+	rootCmd.AddCommand(cli.NewMarketplaceCmd())
 }
 
 func main() {

@@ -421,6 +421,8 @@ func (i *Installer) getSourceHandler(sourceType string) (SourceHandler, error) {
 		return &GitHandler{}, nil
 	case "local":
 		return &LocalHandler{}, nil
+	case "subagents":
+		return NewSubagentsHandler(i.config)
 	default:
 		return nil, fmt.Errorf("unsupported source type: %s", sourceType)
 	}

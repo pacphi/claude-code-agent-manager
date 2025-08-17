@@ -46,6 +46,10 @@ type Source struct {
 	PostInstall      []PostInstall    `yaml:"post_install,omitempty"`
 	ConflictStrategy string           `yaml:"conflict_strategy,omitempty"`
 	Watch            bool             `yaml:"watch,omitempty"`
+	// Marketplace-specific fields
+	Category       string      `yaml:"category,omitempty"`        // Filter by marketplace category
+	MarketplaceURL string      `yaml:"marketplace_url,omitempty"` // Custom marketplace URL
+	Cache          CacheConfig `yaml:"cache,omitempty"`           // Cache configuration
 }
 
 // AuthConfig contains authentication settings
@@ -95,6 +99,14 @@ type PostInstall struct {
 	Type string   `yaml:"type"`
 	Path string   `yaml:"path,omitempty"`
 	Args []string `yaml:"args,omitempty"`
+}
+
+// CacheConfig for marketplace caching
+type CacheConfig struct {
+	Enabled   bool `yaml:"enabled"`
+	TTLHours  int  `yaml:"ttl_hours"`
+	MaxSizeMB int  `yaml:"max_size_mb"`
+	RefreshBg bool `yaml:"refresh_background"`
 }
 
 // Metadata contains tracking and logging configuration

@@ -76,7 +76,8 @@ The configuration supports variable substitution:
 ## Dependencies
 
 - Go 1.24.6+ required
-- Key dependencies: cobra (CLI), go-git (Git operations), yaml.v3 (configuration)
+- Key dependencies: cobra (CLI), go-git (Git operations), yaml.v3 (configuration), chromedp (browser automation)
+- **Chrome/Chromium/Brave browser required** for subagents.sh marketplace integration (see MARKETPLACE.md)
 - Optional: GitHub CLI for enhanced GitHub integration
 - Optional: golangci-lint for linting
 - Optional: entr for development hot reload

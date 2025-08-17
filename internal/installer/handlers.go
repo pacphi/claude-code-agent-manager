@@ -1,17 +1,21 @@
 package installer
 
 import (
+	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
+	"github.com/pacphi/claude-code-agent-manager/internal/marketplace"
 	"github.com/pacphi/claude-code-agent-manager/internal/util"
 )
 
@@ -396,4 +400,209 @@ func commandExists(cmd string) bool {
 
 func expandPath(path string) (string, error) {
 	return util.ExpandPath(path)
+}
+
+// SubagentsHandler handles subagents.sh marketplace
+type SubagentsHandler struct {
+	container *marketplace.Container
+	config    *config.Config
+}
+
+func NewSubagentsHandler(cfg *config.Config) (*SubagentsHandler, error) {
+	containerConfig := marketplace.ContainerConfig{
+		BaseURL:         "https://subagents.sh",
+		CacheEnabled:    true,
+		CacheTTLHours:   1,
+		CacheMaxSizeMB:  50,
+		BrowserHeadless: true,
+		BrowserTimeout:  30,
+		UserAgent:       "agent-manager/1.0",
+	}
+
+	container, err := marketplace.NewContainer(containerConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create marketplace scraper: %w", err)
+	}
+
+	return &SubagentsHandler{
+		container: container,
+		config:    cfg,
+	}, nil
+}
+
+// Fetch implements SourceHandler interface
+func (s *SubagentsHandler) Fetch(source config.Source, destDir string) (string, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Override container config if source has custom settings
+	if source.Cache.Enabled || source.Cache.TTLHours > 0 || source.Cache.MaxSizeMB > 0 || source.MarketplaceURL != "" {
+		containerConfig := marketplace.ContainerConfig{
+			BaseURL:         source.MarketplaceURL,
+			CacheEnabled:    source.Cache.Enabled,
+			CacheTTLHours:   source.Cache.TTLHours,
+			CacheMaxSizeMB:  int64(source.Cache.MaxSizeMB),
+			BrowserHeadless: true,
+			BrowserTimeout:  30,
+			UserAgent:       "agent-manager/1.0",
+		}
+
+		if containerConfig.BaseURL == "" {
+			containerConfig.BaseURL = "https://subagents.sh"
+		}
+		if containerConfig.CacheTTLHours == 0 {
+			containerConfig.CacheTTLHours = 1 // Default
+		}
+		if containerConfig.CacheMaxSizeMB == 0 {
+			containerConfig.CacheMaxSizeMB = 50 // Default
+		}
+
+		// Close existing container and create new one
+		if s.container != nil {
+			_ = s.container.Close()
+		}
+
+		var err error
+		s.container, err = marketplace.NewContainer(containerConfig)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to create custom container: %w", err)
+		}
+	}
+
+	// Get marketplace data
+	categories, err := s.container.Service.GetCategories(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch marketplace categories: %w", err)
+	}
+
+	// Get agents by category
+	var agents []marketplace.Agent
+	if category := source.Category; category != "" {
+		// Get agents for specific category
+		categoryAgents, err := s.container.Service.GetAgents(ctx, category)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to fetch agents for category %s: %w", category, err)
+		}
+		agents = categoryAgents
+	} else {
+		// Get agents from all categories
+		for _, cat := range categories {
+			categoryAgents, err := s.container.Service.GetAgents(ctx, cat.Slug)
+			if err != nil {
+				continue // Skip categories that fail
+			}
+			agents = append(agents, categoryAgents...)
+		}
+	}
+
+	if len(agents) == 0 {
+		return "", "", fmt.Errorf("no agents found for the specified criteria")
+	}
+
+	// Create temporary directory structure
+	sourcePath := filepath.Join(destDir, "agents")
+	if err := os.MkdirAll(sourcePath, 0755); err != nil {
+		return "", "", fmt.Errorf("failed to create source directory: %w", err)
+	}
+
+	// Download all agent content
+	for _, agent := range agents {
+		content, err := s.container.Service.GetAgentContent(ctx, agent.ID)
+		if err != nil {
+			fmt.Printf("Warning: failed to get content for %s: %v\n", agent.Name, err)
+			continue
+		}
+
+		// Write agent file
+		filename := fmt.Sprintf("%s.md", agent.Slug)
+		agentPath := filepath.Join(sourcePath, filename)
+
+		// Format content with proper frontmatter
+		formattedContent := s.formatAgentContent(agent, content)
+
+		if err := os.WriteFile(agentPath, []byte(formattedContent), 0644); err != nil {
+			return "", "", fmt.Errorf("failed to write agent %s: %w", agent.Name, err)
+		}
+	}
+
+	// Generate version hash based on agents and timestamp
+	versionHash := s.generateVersionHash(agents)
+
+	return sourcePath, versionHash, nil
+}
+
+// CheckUpdate implements SourceHandler interface
+func (s *SubagentsHandler) CheckUpdate(source config.Source, currentCommit string) (bool, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	categories, err := s.container.Service.GetCategories(ctx)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to check marketplace updates: %w", err)
+	}
+
+	// Get all agents for hash generation
+	var agents []marketplace.Agent
+	for _, cat := range categories {
+		categoryAgents, err := s.container.Service.GetAgents(ctx, cat.Slug)
+		if err != nil {
+			continue // Skip categories that fail
+		}
+		agents = append(agents, categoryAgents...)
+	}
+
+	newHash := s.generateVersionHash(agents)
+	hasUpdate := newHash != currentCommit
+
+	return hasUpdate, newHash, nil
+}
+
+// Helper methods
+func (s *SubagentsHandler) formatAgentContent(agent marketplace.Agent, content string) string {
+	frontmatter := fmt.Sprintf(`---
+name: %s
+description: %s
+category: %s
+author: %s
+rating: %.1f
+downloads: %d
+tags: %s
+created_at: %s
+updated_at: %s
+source: subagents.sh
+source_url: %s
+---
+
+%s`,
+		agent.Name,
+		agent.Description,
+		agent.Category,
+		agent.Author,
+		agent.Rating,
+		agent.Downloads,
+		strings.Join(agent.Tags, ", "),
+		agent.CreatedAt.Format("2006-01-02"),
+		agent.UpdatedAt.Format("2006-01-02"),
+		agent.ContentURL,
+		content)
+
+	return frontmatter
+}
+
+func (s *SubagentsHandler) generateVersionHash(agents []marketplace.Agent) string {
+	// Generate a hash based on current timestamp and agent count
+	now := time.Now()
+	hashInput := fmt.Sprintf("%s-%d", now.Format("2006-01-02-15-04-05"), len(agents))
+
+	// Use SHA256 for proper hashing
+	hasher := sha256.New()
+	hasher.Write([]byte(hashInput))
+	hashBytes := hasher.Sum(nil)
+
+	// Use first 12 characters of hex hash for readability
+	hash := fmt.Sprintf("%x", hashBytes)
+	if len(hash) > 12 {
+		hash = hash[:12]
+	}
+	return fmt.Sprintf("subagents-%s", hash)
 }

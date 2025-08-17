@@ -12,7 +12,7 @@ settings:
 
 sources:
   - name: awesome-claude-code-subagents
-    enabled: true
+    enabled: false
     type: github
     repository: VoltAgent/awesome-claude-code-subagents
     branch: main
@@ -61,6 +61,28 @@ sources:
       exclude:
         patterns: ["README.md"]
 
+  - name: davepoon-claude-code-subagents-collection
+    enabled: false
+    type: github
+    repository: davepoon/claude-code-subagents-collection
+    branch: main
+    paths:
+      source: subagents
+      target: ${settings.base_dir}
+    filters:
+      include:
+        extensions: [".md"]
+
+  - name: subagents-marketplace-all
+    enabled: true
+    type: subagents
+    paths:
+      target: ${settings.base_dir}/marketplace
+    cache:
+      enabled: true
+      ttl_hours: 1
+      max_size_mb: 50
+
   # Example: Custom agents from another repository
   # - name: custom-agents
   #   enabled: false
@@ -92,6 +114,18 @@ sources:
   #     include:
   #       extensions: [".md", ".yaml"]
   #   watch: true  # Watch for changes in development mode
+
+  # Example: Specific category from subagents.sh marketplace
+  # - name: subagents-ai-development
+  #   enabled: false
+  #   type: subagents
+  #   category: "AI Development"  # Filter by marketplace category
+  #   paths:
+  #     target: ${settings.base_dir}/marketplace/ai-dev
+  #   cache:
+  #     enabled: true
+  #     ttl_hours: 2
+  #     max_size_mb: 100
 
 metadata:
   tracking_file: .claude/.installed-agents.json
