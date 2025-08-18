@@ -1,6 +1,6 @@
 # Agent Manager Usage Guide
 
-This guide provides detailed instructions on how to use Agent Manager for managing Claude Code agents.
+This guide provides detailed instructions on how to use Agent Manager for managing Claude Code subagents.
 
 ## Command Overview
 

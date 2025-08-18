@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Go-based command-line tool called **Agent Manager** for managing Claude Code agents from multiple sources. It provides YAML-driven configuration with intelligent conflict resolution, file transformations, and installation tracking.
+This is a Go-based command-line tool called **Agent Manager** for managing Claude Code subagents from multiple sources. It provides YAML-driven configuration with intelligent conflict resolution, file transformations, and installation tracking.
 
 ## Common Commands
 

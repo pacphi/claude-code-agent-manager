@@ -27,7 +27,7 @@ func (c *Commands) NewMarketplaceCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "marketplace",
 		Short: "Browse the subagents.sh marketplace",
-		Long: `Discover and view details of Claude Code agents from the subagents.sh marketplace.
+		Long: `Discover and view details of Claude Code subagents from the subagents.sh marketplace.
 
 Examples:
   agent-manager marketplace list                    # List all categories

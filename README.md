@@ -1,10 +1,10 @@
 # Claude Code Agent Manager
 
-A powerful, YAML-driven system for managing Claude Code agents from multiple sources with intelligent conflict resolution, transformations, and tracking.
+A powerful, YAML-driven system for managing Claude Code [subagents](https://docs.anthropic.com/en/docs/claude-code/sub-agents) from multiple sources with intelligent conflict resolution, transformations, and tracking.
 
 ## Overview
 
-This repository provides **Agent Manager**, a Go-based command-line tool that revolutionizes how you install and manage Claude Code agents. It offers:
+This repository provides **Agent Manager**, a Go-based command-line tool that revolutionizes how you install and manage Claude Code subagents. It offers:
 
 - **YAML-driven configuration** for complete control
 - **Multiple source types** (GitHub, Git, Local)

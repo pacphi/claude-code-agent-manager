@@ -50,7 +50,7 @@ USER appuser
 # Set security labels
 LABEL maintainer="Chris Phillipson" \
       version="1.0" \
-      description="Secure Agent Manager for Claude Code agents" \
+      description="Secure Agent Manager for Claude Code subagents" \
       security.scan="true" \
       security.nonroot="true"
 

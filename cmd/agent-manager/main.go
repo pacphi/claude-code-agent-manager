@@ -25,9 +25,9 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "agent-manager",
-	Short: "Manage Claude Code agents via YAML configuration",
+	Short: "Manage Claude Code subagents via YAML configuration",
 	Long: `Agent Manager is a tool for installing, updating, and managing
-Claude Code agents from various sources using YAML configuration.`,
+Claude Code subagents from various sources using YAML configuration.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if noColor {
 			color.NoColor = true
