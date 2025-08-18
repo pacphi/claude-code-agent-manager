@@ -1,0 +1,39 @@
+# Multi-stage build for security and minimal image size
+FROM cgr.dev/chainguard/go:latest AS builder
+
+# Set working directory
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy source code
+COPY . .
+
+# Build the binary with security flags
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -a -installsuffix cgo \
+    -o agent-manager \
+    cmd/agent-manager/main.go
+
+# Final stage - Chainguard static image
+FROM cgr.dev/chainguard/static:latest
+
+# Copy the binary from builder
+COPY --from=builder /build/agent-manager /usr/local/bin/agent-manager
+
+# Set security labels
+LABEL maintainer="Chris Phillipson" \
+      version="1.0" \
+      description="Secure Agent Manager for Claude Code using Chainguard base" \
+      security.scan="true"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/usr/local/bin/agent-manager", "version"]
+
+# Default entrypoint
+ENTRYPOINT ["/usr/local/bin/agent-manager"]
+CMD ["--help"]

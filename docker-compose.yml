@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  agent-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VERSION=${VERSION:-dev}
+    image: agent-manager:${VERSION:-latest}
+    container_name: agent-manager
+
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+
+    # Volumes for configuration and output
+    volumes:
+      # Mount config as read-only
+      - ./agents-config.yaml:/app/agents-config.yaml:ro
+      # Mount for agent installation (read-write needed)
+      - agent-data:/app/.claude/agents
+      # Mount for installation tracking
+      - tracker-data:/app/.agent-manager
+
+    # Run as non-root user (matches Dockerfile)
+    user: appuser
+
+    # Network configuration
+    networks:
+      - agent-network
+
+    # Environment variables
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CONFIG_PATH=/app/agents-config.yaml
+
+    # Override command for different operations
+    # Examples:
+    # docker-compose run agent-manager install
+    # docker-compose run agent-manager list
+    # docker-compose run agent-manager validate
+    command: ["--help"]
+
+volumes:
+  agent-data:
+    driver: local
+  tracker-data:
+    driver: local
+
+networks:
+  agent-network:
+    driver: bridge

@@ -1,0 +1,61 @@
+# Git files
+.git
+.gitignore
+
+# Build artifacts
+bin/
+releases/
+*.exe
+agent-manager
+
+# Test and coverage files
+*_test.go
+coverage.out
+coverage.html
+*.test
+*.prof
+test-*.yaml
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Local configuration
+.env
+.env.local
+*.local.yaml
+*.local.yml
+
+# Claude Code specific
+.claude/
+CLAUDE.md
+
+# Scripts (except necessary ones)
+scripts/test*.sh
+scripts/dev*.sh

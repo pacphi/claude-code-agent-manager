@@ -286,6 +286,218 @@ Enable verbose logging for detailed browser automation logs:
 agent-manager marketplace list --verbose
 ```
 
+## Docker Usage
+
+Agent Manager can be run in a Docker container for isolated, reproducible deployments. This is particularly useful for CI/CD pipelines, cloud deployments, or when you want to avoid installing dependencies on your host system.
+
+### Prerequisites
+
+- Docker installed and running
+- Docker Compose (optional, for easier management)
+
+### Building the Docker Image
+
+Build the Docker image using the provided Dockerfile:
+
+```bash
+# Using Make
+make docker-build
+
+# Or using Docker directly
+docker build -t agent-manager:latest .
+
+# Build with specific version tag
+docker build -t agent-manager:v1.0.0 --build-arg VERSION=v1.0.0 .
+```
+
+### Running with Docker
+
+#### Basic Usage
+
+Run Agent Manager commands in a container:
+
+```bash
+# Show help
+docker run --rm agent-manager:latest --help
+
+# Validate configuration
+docker run --rm \
+  -v $(pwd)/agents-config.yaml:/app/agents-config.yaml:ro \
+  agent-manager:latest validate
+
+# Install agents
+docker run --rm \
+  -v $(pwd)/agents-config.yaml:/app/agents-config.yaml:ro \
+  -v agent-data:/app/.claude/agents \
+  -v tracker-data:/app/.agent-manager \
+  agent-manager:latest install
+
+# List installed agents
+docker run --rm \
+  -v tracker-data:/app/.agent-manager:ro \
+  agent-manager:latest list
+```
+
+#### With Environment Variables
+
+Pass environment variables for authentication:
+
+```bash
+docker run --rm \
+  -e GITHUB_TOKEN=$GITHUB_TOKEN \
+  -v $(pwd)/agents-config.yaml:/app/agents-config.yaml:ro \
+  -v agent-data:/app/.claude/agents \
+  agent-manager:latest install
+```
+
+### Using Docker Compose
+
+Docker Compose provides easier volume and configuration management:
+
+#### Starting the Service
+
+```bash
+# Build the image
+docker-compose build
+
+# Run install command
+docker-compose run agent-manager install
+
+# Run with specific source
+docker-compose run agent-manager install --source awesome-claude-code-subagents
+
+# List installed agents
+docker-compose run agent-manager list
+
+# Update agents
+docker-compose run agent-manager update
+
+# Validate configuration
+docker-compose run agent-manager validate
+```
+
+#### With Custom Configuration
+
+Override default settings using environment variables:
+
+```bash
+# Set version and log level
+VERSION=v1.0.0 LOG_LEVEL=debug docker-compose run agent-manager install
+
+# Use different config file
+docker-compose run \
+  -v $(pwd)/custom-config.yaml:/app/agents-config.yaml:ro \
+  agent-manager install
+```
+
+### Volume Mounts
+
+The Docker setup uses volumes for persistent data:
+
+| Volume/Mount | Purpose | Mode |
+|--------------|---------|------|
+| `/app/agents-config.yaml` | Configuration file | Read-only |
+| `/app/.claude/agents` | Installed agents directory | Read-write |
+| `/app/.agent-manager` | Installation tracking data | Read-write |
+
+Example with custom paths:
+
+```bash
+docker run --rm \
+  -v /path/to/config.yaml:/app/agents-config.yaml:ro \
+  -v /path/to/agents:/app/.claude/agents \
+  -v /path/to/tracker:/app/.agent-manager \
+  agent-manager:latest install
+```
+
+### Security Features
+
+The Docker image includes multiple security features:
+
+- **Minimal base image**: Uses `scratch` (empty) image, reducing attack surface
+- **Non-root user**: Runs as `appuser`, not root
+- **Read-only filesystem**: Container filesystem is read-only by default
+- **No shell**: No shell or package manager in the final image
+- **Static binary**: Single static binary with no dependencies
+- **Resource limits**: CPU and memory limits configured in docker-compose.yml
+
+### CI/CD Integration
+
+#### GitHub Actions Example
+
+```yaml
+name: Install Agents
+on:
+  push:
+    branches: [main]
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t agent-manager:${{ github.sha }} .
+
+      - name: Install agents
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/agents-config.yaml:/app/agents-config.yaml:ro \
+            -v agents:/app/.claude/agents \
+            agent-manager:${{ github.sha }} install
+```
+
+#### GitLab CI Example
+
+```yaml
+install-agents:
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t agent-manager:$CI_COMMIT_SHA .
+    - docker run --rm
+        -v $CI_PROJECT_DIR/agents-config.yaml:/app/agents-config.yaml:ro
+        -v agents:/app/.claude/agents
+        agent-manager:$CI_COMMIT_SHA install
+```
+
+### Troubleshooting Docker
+
+**Permission denied errors**: Ensure volumes have correct permissions:
+
+```bash
+# Create volumes with proper permissions
+docker volume create agent-data
+docker volume create tracker-data
+```
+
+**Configuration not found**: Mount configuration file correctly:
+
+```bash
+# Ensure absolute path for config
+docker run -v $(realpath agents-config.yaml):/app/agents-config.yaml:ro ...
+```
+
+**Network issues in container**: For private repositories, ensure authentication:
+
+```bash
+# Pass GitHub token
+docker run -e GITHUB_TOKEN=$GITHUB_TOKEN ...
+
+# For SSH authentication, mount SSH keys (not recommended for production)
+docker run -v ~/.ssh:/home/appuser/.ssh:ro ...
+```
+
+**Debugging container issues**: Run with shell for debugging (requires debug image):
+
+```bash
+# Build debug image with shell
+docker build --target builder -t agent-manager:debug .
+docker run --rm -it agent-manager:debug /bin/sh
+```
+
 ## Configuration Validation
 
 ### Validate Current Configuration
