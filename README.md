@@ -218,7 +218,7 @@ We welcome contributions! Agent Manager is designed to be extensible:
 
 ## License
 
-This project is licensed under the MIT License. See LICENSE file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
 
 ## Support
 
