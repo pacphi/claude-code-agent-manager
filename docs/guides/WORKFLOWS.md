@@ -47,7 +47,7 @@ agent-manager query "code review"
 agent-manager show code-reviewer
 
 # View installation statistics
-agent-manager stats --by-source
+agent-manager stats --detailed
 
 # Check specific source
 agent-manager list --source awesome-claude-code-subagents
@@ -349,17 +349,15 @@ agent-manager install --verbose
 When conflicts occur:
 
 ```bash
-# Option 1: Skip conflicts
-agent-manager install --conflict-strategy skip
-
-# Option 2: Backup and overwrite
-agent-manager install --conflict-strategy backup
-
-# Option 3: Manual resolution
+# Option 1: Preview conflicts first
 agent-manager install --dry-run
-# Review conflicts
-# Manually handle files
-agent-manager install --conflict-strategy overwrite
+
+# Option 2: Configure strategy in agents-config.yaml and install
+# Available strategies: skip, backup, overwrite
+agent-manager install
+
+# Option 3: Manual resolution - review and handle files manually
+# then install with appropriate strategy configured
 ```
 
 ## Agent Discovery and Analysis Workflows
@@ -385,13 +383,13 @@ agent-manager query --interactive "documentation"
 agent-manager stats
 
 # Analyze completeness and quality
-agent-manager stats --coverage --duplicates
+agent-manager stats --validation
 
 # Understand tool usage patterns
-agent-manager stats --tools --inherited-tools
+agent-manager stats --tools
 
-# Find gaps or orphaned agents
-agent-manager stats --orphaned
+# Get detailed statistics by source
+agent-manager stats --detailed
 ```
 
 ### Agent Quality Assurance

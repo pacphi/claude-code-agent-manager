@@ -37,7 +37,7 @@ agent-manager install [options]
 |--------|-------|-------------|---------|
 | `--source` | `-s` | Install from specific source only | All enabled |
 
-*Note: Advanced options like --force, --conflict-strategy, --parallel, and --timeout are configured via the YAML configuration file rather than command-line flags.*
+*Note: Advanced options like conflict resolution strategies, parallel execution, and timeouts are configured via the YAML configuration file rather than command-line flags.*
 
 **Examples:**
 
@@ -47,9 +47,6 @@ agent-manager install
 
 # Install specific source
 agent-manager install --source github-agents
-
-# Force reinstall with overwrite
-agent-manager install --force --conflict-strategy overwrite
 ```
 
 ### uninstall
@@ -160,7 +157,7 @@ agent-manager marketplace <subcommand> [options]
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--category` | Filter by category | All categories |
-| `--limit` | Maximum results | `50` |
+| `--limit` | Maximum results | `20` |
 
 **Show Options:**
 
@@ -262,10 +259,6 @@ agent-manager stats [options]
 ```bash
 # Basic statistics
 agent-manager stats
-
-# Detailed analysis
-agent-manager stats --coverage --duplicates
-agent-manager stats --tools --by-source
 ```
 
 ### index
@@ -308,14 +301,7 @@ agent-manager validate [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--strict` | Fail on warnings | `false` |
-| `--verbose` | Show detailed validation | `false` |
 | `--agents` | Validate all agent files | `false` |
-| `--agent` | Validate specific agent | |
-| `--check-names` | Verify name format (lowercase, hyphens) | `false` |
-| `--check-tools` | Verify tool declarations exist | `false` |
-| `--check-duplicates` | Find duplicate agent names | `false` |
-| `--check-required` | Ensure name & description present | `false` |
 
 **Examples:**
 
@@ -323,10 +309,8 @@ agent-manager validate [options]
 # Basic validation
 agent-manager validate
 
-# Agent-specific validation
+# Validate all agents
 agent-manager validate --agents
-agent-manager validate --agent code-reviewer
-agent-manager validate --agents --check-names --check-tools
 ```
 
 ### version
@@ -337,20 +321,9 @@ Display version information.
 agent-manager version [options]
 ```
 
-**Options:**
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--verbose` | Show detailed build info | `false` |
-| `--check-update` | Check for newer versions | `false` |
-
 **Output includes:**
 
 - Version number
-- Build date
-- Go version
-- Git commit
-- Platform/Architecture
 
 ### help
 
@@ -396,12 +369,6 @@ Command-line options override configuration:
 ```bash
 # Override config file
 agent-manager install --config production.yaml
-
-# Override conflict strategy
-agent-manager install --conflict-strategy overwrite
-
-# Override timeout
-agent-manager install --timeout 600
 ```
 
 ## Environment Variables
@@ -435,40 +402,6 @@ Agent Manager supports environment variables:
 
 Human-readable output with colors and formatting.
 
-### JSON
-
-Machine-readable JSON for scripting:
-
-```bash
-agent-manager list --format json | jq '.sources[].name'
-```
-
-### Tree
-
-Hierarchical view of installations:
-
-```bash
-agent-manager list --format tree
-```
-
-### CSV
-
-Comma-separated values for spreadsheets:
-
-```bash
-agent-manager list --format csv > agents.csv
-```
-
-## Scripting Examples
-
-### Check if source is installed
-
-```bash
-if agent-manager list --source my-source --format json | jq -e '.sources | length > 0' > /dev/null; then
-  echo "Source is installed"
-fi
-```
-
 ### Update only if changes available
 
 ```bash
@@ -477,30 +410,7 @@ if agent-manager update --check-only | grep -q "Updates available"; then
 fi
 ```
 
-### Backup before update
-
-```bash
-agent-manager list --format json > pre-update.json
-agent-manager update
-agent-manager list --format json > post-update.json
-diff pre-update.json post-update.json
-```
-
 ## Advanced Usage
-
-### Parallel Operations
-
-```bash
-# Increase parallelism for faster operations
-agent-manager install --parallel 4
-```
-
-### Custom Timeout
-
-```bash
-# Increase timeout for slow networks
-agent-manager install --timeout 600
-```
 
 ### Debug Mode
 

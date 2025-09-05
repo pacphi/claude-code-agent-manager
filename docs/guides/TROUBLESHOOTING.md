@@ -186,8 +186,8 @@ agent-manager marketplace list --verbose
 # Check current strategy
 grep conflict_strategy agents-config.yaml
 
-# Use safe strategy
-agent-manager install --conflict-strategy backup
+# Configure backup strategy (default) in agents-config.yaml
+agent-manager install
 
 # Preview changes
 agent-manager install --dry-run
@@ -202,8 +202,9 @@ ls -la ~/.claude/backups/
 # Restore from backup
 cp ~/.claude/backups/file.md.timestamp ~/.claude/agents/file.md
 
-# Use skip strategy to preserve changes
-agent-manager update --conflict-strategy skip
+# Configure skip strategy to preserve changes
+# Set in agents-config.yaml: conflict_strategy: skip
+agent-manager update
 ```
 
 ### Query and Index Issues

@@ -124,17 +124,6 @@ sources:
     conflict_strategy: overwrite  # Always use latest
 ```
 
-### Command-Line Override
-
-Override configuration temporarily:
-
-```bash
-# Use specific strategy for this run
-agent-manager install --conflict-strategy overwrite
-
-# Applies to all sources in this execution
-agent-manager update --conflict-strategy skip
-```
 
 ## Conflict Detection
 
@@ -172,12 +161,11 @@ ls -la ~/.claude/agents/
 You've customized an agent and want to update without losing changes:
 
 ```bash
-# Option 1: Skip strategy preserves your version
-agent-manager update --conflict-strategy skip
+# Update with configuration-specified conflict strategy
+agent-manager update
 
-# Option 2: Backup strategy keeps both versions
-agent-manager update --conflict-strategy backup
-# Then manually merge changes from backup
+# Use dry-run to preview conflicts first
+agent-manager update --dry-run
 ```
 
 ### Scenario 2: Fresh Installation Over Existing
@@ -192,10 +180,17 @@ agent-manager uninstall --all
 agent-manager install
 ```
 
-Or use overwrite:
+Configure overwrite strategy in agents-config.yaml:
+
+```yaml
+settings:
+  conflict_strategy: overwrite
+```
+
+Then install:
 
 ```bash
-agent-manager install --conflict-strategy overwrite
+agent-manager install
 ```
 
 ### Scenario 3: Testing New Sources
@@ -203,8 +198,9 @@ agent-manager install --conflict-strategy overwrite
 Try new sources without affecting existing setup:
 
 ```bash
-# Use skip to preserve existing files
-agent-manager install --source new-source --conflict-strategy skip
+# Configure source with skip strategy in agents-config.yaml
+# Then install from specific source
+agent-manager install --source new-source
 
 # Review what was installed
 agent-manager list --source new-source
@@ -290,11 +286,14 @@ CONFLICT_STRATEGY=skip agent-manager install
 Install in order of importance:
 
 ```bash
-# Critical agents - skip conflicts
-agent-manager install --source critical-agents --conflict-strategy skip
+# Configure different strategies per source in agents-config.yaml
+# Then install in order of importance
 
-# Optional agents - overwrite if needed
-agent-manager install --source optional-agents --conflict-strategy overwrite
+# Critical agents first
+agent-manager install --source critical-agents
+
+# Optional agents second
+agent-manager install --source optional-agents
 ```
 
 ### Selective Restoration

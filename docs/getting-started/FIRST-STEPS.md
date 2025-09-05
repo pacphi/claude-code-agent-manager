@@ -163,11 +163,11 @@ agent-manager show code-reviewer --extract-tools
 # Get overall statistics
 agent-manager stats
 
-# Show coverage metrics (completeness)
-agent-manager stats --coverage
+# Show validation report
+agent-manager stats --validation
 
-# Find agents by source
-agent-manager stats --by-source
+# Show detailed statistics by source
+agent-manager stats --detailed
 
 # Show tool usage across agents
 agent-manager stats --tools
@@ -214,17 +214,17 @@ agent-manager uninstall --all
 
 ### Handle Conflicts
 
-When you see a conflict:
+When you see a conflict, configure the strategy in agents-config.yaml:
+
+```yaml
+settings:
+  conflict_strategy: skip     # Or: overwrite, backup (default)
+```
+
+Then install:
 
 ```bash
-# Skip existing files
-agent-manager install --conflict-strategy skip
-
-# Force overwrite
-agent-manager install --conflict-strategy overwrite
-
-# Create backups (default)
-agent-manager install --conflict-strategy backup
+agent-manager install
 ```
 
 ## Working with Multiple Sources
@@ -281,8 +281,8 @@ agent-manager install --dry-run --verbose
 ### 3. Keep Backups
 
 ```bash
-# Default strategy creates backups
-agent-manager install --conflict-strategy backup
+# Default backup strategy is configured in agents-config.yaml
+agent-manager install
 ```
 
 ### 4. Track Your Changes
