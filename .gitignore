@@ -168,8 +168,9 @@ debug.test
 backups/
 .installed-agents.json
 
-# Planning documentation
-project-documentation/
+# Other
+examples/
+project-documentation
 
 # NOTE: go.sum is intentionally NOT ignored
 # go.sum should be committed for reproducible builds
