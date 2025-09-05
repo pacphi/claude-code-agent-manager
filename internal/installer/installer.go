@@ -635,14 +635,18 @@ func contains(slice []string, item string) bool {
 
 // extractAgentMetadata parses agent files and extracts metadata
 func (i *Installer) extractAgentMetadata(sourceName string, files []string, basePath string) []tracker.AgentInfo {
-	agentMetadata := make([]tracker.AgentInfo, 0, len(files))
+	// Pre-filter markdown files to optimize memory allocation
+	mdFiles := i.preFilterMarkdownFiles(files)
+	if len(mdFiles) == 0 {
+		return nil // Early return if no markdown files
+	}
+
+	// Allocate with optimal capacity based on filtered files
+	agentMetadata := make([]tracker.AgentInfo, 0, len(mdFiles))
 	agentParser := parser.NewParser()
 
-	for _, relPath := range files {
-		if !strings.HasSuffix(relPath, ".md") {
-			continue // Skip non-markdown files
-		}
-
+	// Process only pre-filtered markdown files
+	for _, relPath := range mdFiles {
 		fullPath := filepath.Join(basePath, relPath)
 
 		// Parse the agent file
@@ -652,7 +656,7 @@ func (i *Installer) extractAgentMetadata(sourceName string, files []string, base
 			continue
 		}
 
-		// Convert to AgentInfo for storage in tracker
+		// Convert to AgentInfo for storage in tracker - build struct more efficiently
 		agentInfo := tracker.AgentInfo{
 			Name:           agentSpec.Name,
 			Description:    agentSpec.Description,
@@ -670,4 +674,32 @@ func (i *Installer) extractAgentMetadata(sourceName string, files []string, base
 	}
 
 	return agentMetadata
+}
+
+// preFilterMarkdownFiles efficiently filters files to only markdown files
+func (i *Installer) preFilterMarkdownFiles(files []string) []string {
+	if len(files) == 0 {
+		return nil
+	}
+
+	// Pre-allocate with estimated capacity (most repos have some non-md files)
+	estimatedMdFiles := len(files) / 3 // Reasonable estimate
+	if estimatedMdFiles < 1 {
+		estimatedMdFiles = 1
+	}
+
+	mdFiles := make([]string, 0, estimatedMdFiles)
+
+	for _, file := range files {
+		if strings.HasSuffix(file, ".md") {
+			mdFiles = append(mdFiles, file)
+		}
+	}
+
+	// If our estimate was wrong, return nil for empty results
+	if len(mdFiles) == 0 {
+		return nil
+	}
+
+	return mdFiles
 }

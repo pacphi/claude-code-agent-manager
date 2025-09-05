@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -12,14 +13,16 @@ import (
 
 // Manager manages progress indicators for the application
 type Manager struct {
-	enabled  bool
-	verbose  bool
-	dryRun   bool
-	noColor  bool
-	bars     map[string]*progressbar.ProgressBar
-	spinners map[string]*progressbar.ProgressBar
-	mu       sync.Mutex
-	output   io.Writer
+	enabled      bool
+	verbose      bool
+	dryRun       bool
+	noColor      bool
+	bars         map[string]*progressbar.ProgressBar
+	spinners     map[string]*progressbar.ProgressBar
+	mu           sync.Mutex
+	output       io.Writer
+	lastCleanup  time.Time
+	cleanupQueue []string // Queue of IDs to cleanup
 }
 
 // Options configures the progress manager
@@ -44,13 +47,15 @@ func New(opts Options) *Manager {
 	}
 
 	return &Manager{
-		enabled:  opts.Enabled,
-		verbose:  opts.Verbose,
-		dryRun:   opts.DryRun,
-		noColor:  opts.NoColor,
-		bars:     make(map[string]*progressbar.ProgressBar),
-		spinners: make(map[string]*progressbar.ProgressBar),
-		output:   output,
+		enabled:      opts.Enabled,
+		verbose:      opts.Verbose,
+		dryRun:       opts.DryRun,
+		noColor:      opts.NoColor,
+		bars:         make(map[string]*progressbar.ProgressBar),
+		spinners:     make(map[string]*progressbar.ProgressBar),
+		output:       output,
+		lastCleanup:  time.Now(),
+		cleanupQueue: make([]string, 0, 10),
 	}
 }
 
@@ -108,6 +113,9 @@ func (m *Manager) StopSpinner(id string, success bool, message string) {
 			}
 		}
 	}
+
+	// Trigger cleanup if needed
+	m.conditionalCleanup()
 }
 
 // StartProgress starts a determinate progress bar
@@ -204,6 +212,9 @@ func (m *Manager) FinishProgress(id string, success bool, message string) {
 			}
 		}
 	}
+
+	// Trigger cleanup if needed
+	m.conditionalCleanup()
 }
 
 // StopAll stops all active progress indicators
@@ -283,4 +294,80 @@ func Default() *Manager {
 		defaultManager = New(Options{Enabled: true})
 	}
 	return defaultManager
+}
+
+// conditionalCleanup performs cleanup if conditions are met (must be called with mutex held)
+func (m *Manager) conditionalCleanup() {
+	now := time.Now()
+
+	// Only cleanup every 30 seconds to avoid excessive overhead
+	if now.Sub(m.lastCleanup) < 30*time.Second {
+		return
+	}
+
+	m.lastCleanup = now
+
+	// Clean up any stale progress indicators
+	// In practice, this should rarely happen due to proper lifecycle management
+	// but provides protection against memory leaks in edge cases
+	totalEntries := len(m.bars) + len(m.spinners)
+	if totalEntries > 100 { // Only cleanup if we have excessive entries
+		m.performCleanup()
+	}
+}
+
+// performCleanup removes stale progress indicators (must be called with mutex held)
+func (m *Manager) performCleanup() {
+	// For progress bars and spinners created with timestamp IDs,
+	// we can identify old ones by parsing the timestamp
+	cutoff := time.Now().Add(-5 * time.Minute) // Consider entries older than 5 minutes as stale
+
+	// Clean up old spinners
+	for id := range m.spinners {
+		if m.isStaleID(id, cutoff) {
+			if bar := m.spinners[id]; bar != nil {
+				_ = bar.Finish()
+			}
+			delete(m.spinners, id)
+		}
+	}
+
+	// Clean up old progress bars
+	for id := range m.bars {
+		if m.isStaleID(id, cutoff) {
+			if bar := m.bars[id]; bar != nil {
+				_ = bar.Finish()
+			}
+			delete(m.bars, id)
+		}
+	}
+}
+
+// isStaleID checks if an ID represents a stale timestamp-based entry
+func (m *Manager) isStaleID(id string, cutoff time.Time) bool {
+	// Check if this looks like a timestamp-based ID (from WithSpinner/WithProgress)
+	if len(id) > 10 && (id[:8] == "spinner-" || id[:9] == "progress-") {
+		// Extract timestamp part
+		var timestampStr string
+		if id[:8] == "spinner-" {
+			timestampStr = id[8:]
+		} else if id[:9] == "progress-" {
+			timestampStr = id[9:]
+		}
+
+		// Try to parse as Unix nano timestamp
+		if nanos, err := strconv.ParseInt(timestampStr, 10, 64); err == nil {
+			timestamp := time.Unix(0, nanos)
+			return timestamp.Before(cutoff)
+		}
+	}
+
+	return false
+}
+
+// GetMemoryStats returns memory usage statistics for monitoring
+func (m *Manager) GetMemoryStats() (int, int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.bars), len(m.spinners)
 }

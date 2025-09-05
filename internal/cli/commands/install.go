@@ -3,18 +3,21 @@ package commands
 import (
 	"fmt"
 
-	"github.com/fatih/color"
+	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/spf13/cobra"
 )
 
 // InstallCommand implements the install command functionality
 type InstallCommand struct {
+	*BaseCommand
 	sourceName string
 }
 
 // NewInstallCommand creates a new install command instance
 func NewInstallCommand() *InstallCommand {
-	return &InstallCommand{}
+	cmd := &InstallCommand{}
+	cmd.BaseCommand = NewBaseCommand(cmd)
+	return cmd
 }
 
 // Name returns the command name
@@ -45,91 +48,37 @@ func (c *InstallCommand) CreateCommand(sharedCtx *SharedContext) *cobra.Command 
 
 // Execute runs the install command logic
 func (c *InstallCommand) Execute(sharedCtx *SharedContext) error {
-	// Load and validate configuration
-	if err := sharedCtx.LoadConfig(); err != nil {
-		return fmt.Errorf("configuration error: %w", err)
-	}
+	return c.ExecuteWithCommonPattern(sharedCtx, c.sourceName)
+}
 
+// ExecuteOperation implements CommandExecutor interface for install operations
+func (c *InstallCommand) ExecuteOperation(ctx *SharedContext, sources []config.Source) error {
 	// Create installer
-	inst, err := sharedCtx.CreateInstaller()
+	inst, err := ctx.CreateInstaller()
 	if err != nil {
 		return fmt.Errorf("failed to create installer: %w", err)
 	}
 
-	// Get sources to install
-	sources, err := sharedCtx.FilterEnabledSources(c.sourceName)
-	if err != nil {
-		return err
-	}
-
-	if len(sources) == 0 {
-		if c.sourceName != "" {
-			return fmt.Errorf("source '%s' is not enabled or not found", c.sourceName)
-		}
-		PrintWarning("No enabled sources found in configuration")
-		return nil
-	}
-
-	// Install from each source
-	successCount := 0
-	failCount := 0
-
+	// Execute install operation on each source
 	for _, source := range sources {
-		if c.shouldUseSpinner(sharedCtx) {
-			// Use spinner for non-verbose mode
-			err := sharedCtx.PM.WithSpinner(fmt.Sprintf("Installing %s", source.Name), func() error {
-				return inst.InstallSource(source)
-			})
-
-			if err != nil {
-				PrintError("Failed to install %s: %v", source.Name, err)
-				failCount++
-				if !sharedCtx.Config.Settings.ContinueOnError {
-					return err
-				}
-			} else {
-				successCount++
-			}
-		} else {
-			// Verbose mode with detailed output
-			color.Blue("Installing from source: %s\n", source.Name)
-
-			if err := inst.InstallSource(source); err != nil {
-				PrintError("Failed to install %s: %v", source.Name, err)
-				failCount++
-				if !sharedCtx.Config.Settings.ContinueOnError {
-					return err
-				}
-			} else {
-				PrintSuccess("Successfully installed %s", source.Name)
-				successCount++
-			}
+		if err := inst.InstallSource(source); err != nil {
+			return err
 		}
 	}
-
-	// Print summary
-	c.printSummary(successCount, failCount)
 	return nil
 }
 
-// shouldUseSpinner determines if spinner should be used based on options
-func (c *InstallCommand) shouldUseSpinner(sharedCtx *SharedContext) bool {
-	return !sharedCtx.Options.NoProgress && !sharedCtx.Options.Verbose
+// GetOperationName implements CommandExecutor interface
+func (c *InstallCommand) GetOperationName() string {
+	return "Installing"
 }
 
-// printSummary prints the installation summary
-func (c *InstallCommand) printSummary(successCount, failCount int) {
-	fmt.Println()
+// GetCompletionMessage implements CommandExecutor interface
+func (c *InstallCommand) GetCompletionMessage() string {
+	return "Installation complete"
+}
 
-	if successCount > 0 {
-		PrintSuccess("Installation complete: %d succeeded", successCount)
-	}
-
-	if failCount > 0 {
-		PrintError("%d failed", failCount)
-	}
-
-	if successCount == 0 && failCount == 0 {
-		PrintInfo("No sources processed")
-	}
+// ShouldContinueOnError implements CommandExecutor interface
+func (c *InstallCommand) ShouldContinueOnError(ctx *SharedContext) bool {
+	return ctx.Config.Settings.ContinueOnError
 }

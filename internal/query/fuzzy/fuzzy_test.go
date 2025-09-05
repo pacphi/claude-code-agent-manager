@@ -1,7 +1,6 @@
 package fuzzy
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/pacphi/claude-code-agent-manager/internal/query/parser"
@@ -349,34 +348,4 @@ func TestFuzzyMatcher_SetThreshold(t *testing.T) {
 	fm.SetThreshold(0.3)
 	result = fm.FindBest("test", agents)
 	assert.Equal(t, agents[0], result)
-}
-
-// Benchmarks for performance testing
-func BenchmarkFuzzyMatcher_Score(b *testing.B) {
-	fm := NewFuzzyMatcher(0.7)
-	s1 := "test-agent-helper"
-	s2 := "test-agent-helper.md"
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		fm.score(s1, s2)
-	}
-}
-
-func BenchmarkFuzzyMatcher_FindBest(b *testing.B) {
-	fm := NewFuzzyMatcher(0.7)
-
-	// Create a larger dataset
-	agents := make([]*parser.AgentSpec, 100)
-	for i := 0; i < 100; i++ {
-		agents[i] = &parser.AgentSpec{
-			Name:     fmt.Sprintf("agent-%d", i),
-			FileName: fmt.Sprintf("agent-%d.md", i),
-		}
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		fm.FindBest("agent-50", agents)
-	}
 }

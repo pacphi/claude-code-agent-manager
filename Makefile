@@ -1,4 +1,4 @@
-.PHONY: build test install clean run help cross-compile benchmark benchmark-quick benchmark-profile benchmark-clean
+.PHONY: build test install clean run help cross-compile benchmark benchmark-quick benchmark-profile benchmark-clean deps-upgrade
 
 # Variables
 BINARY_NAME := agent-manager
@@ -63,6 +63,13 @@ deps:
 	@go mod download
 	@go mod tidy
 	@echo "Dependencies updated"
+
+## deps-upgrade: Upgrade all dependencies to their latest versions
+deps-upgrade:
+	@echo "Upgrading all dependencies..."
+	@go get -u ./...
+	@go mod tidy
+	@echo "Dependencies upgraded to latest versions"
 
 ## fmt: Format Go code
 fmt:

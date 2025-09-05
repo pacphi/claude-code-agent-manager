@@ -64,8 +64,8 @@ func (fm *FileManager) Copy(src, dst string) error {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 
-	// Copy file contents
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
+	// Copy file contents using optimized buffer
+	if _, err := fm.copyWithOptimalBuffer(dstFile, srcFile); err != nil {
 		if closeErr := dstFile.Close(); closeErr != nil {
 			fmt.Printf("Warning: failed to close temp file during cleanup: %v\n", closeErr)
 		}
@@ -114,6 +114,16 @@ func (fm *FileManager) Copy(src, dst string) error {
 	}
 
 	return nil
+}
+
+// copyWithOptimalBuffer copies data using an optimized 64KB buffer for better I/O performance
+func (fm *FileManager) copyWithOptimalBuffer(dst io.Writer, src io.Reader) (int64, error) {
+	// Use 64KB buffer for optimal I/O performance
+	// This size balances memory usage and performance for most file operations
+	const optimalBufferSize = 64 * 1024
+	buffer := make([]byte, optimalBufferSize)
+
+	return io.CopyBuffer(dst, src, buffer)
 }
 
 // Move safely moves a file from src to dst
