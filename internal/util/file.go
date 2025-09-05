@@ -5,7 +5,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 )
@@ -55,25 +57,60 @@ func (fm *FileManager) Copy(src, dst string) error {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
-	// Create destination file
-	dstFile, err := os.Create(dst)
+	// Use atomic file copy: write to temp file first
+	tempPath := dst + ".tmp"
+	dstFile, err := os.Create(tempPath)
 	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer func() {
-		if closeErr := dstFile.Close(); closeErr != nil {
-			fmt.Printf("Warning: failed to close destination file: %v\n", closeErr)
-		}
-	}()
 
 	// Copy file contents
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close temp file during cleanup: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file during cleanup: %v\n", removeErr)
+		}
 		return fmt.Errorf("failed to copy file contents: %w", err)
 	}
 
 	// Set same permissions as source
 	if err := dstFile.Chmod(srcInfo.Mode()); err != nil {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close temp file during cleanup: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file during cleanup: %v\n", removeErr)
+		}
 		return fmt.Errorf("failed to set file permissions: %w", err)
+	}
+
+	// Force sync to disk
+	if err := dstFile.Sync(); err != nil {
+		if closeErr := dstFile.Close(); closeErr != nil {
+			fmt.Printf("Warning: failed to close temp file during cleanup: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file during cleanup: %v\n", removeErr)
+		}
+		return fmt.Errorf("failed to sync file: %w", err)
+	}
+
+	// Close file before atomic rename
+	if err := dstFile.Close(); err != nil {
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file during cleanup: %v\n", removeErr)
+		}
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+
+	// Atomic rename with Windows compatibility
+	if err := atomicRename(tempPath, dst); err != nil {
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Printf("Warning: failed to remove temp file during cleanup: %v\n", removeErr)
+		}
+		return fmt.Errorf("failed to finalize file copy: %w", err)
 	}
 
 	return nil
@@ -200,4 +237,45 @@ func ExpandPath(path string) (string, error) {
 	}
 
 	return filepath.Join(home, path[2:]), nil
+}
+
+// atomicRename performs an atomic rename with proper Windows compatibility
+// It uses a retry mechanism to handle file locking issues on Windows
+func atomicRename(oldPath, newPath string) error {
+	retries := 3
+	delay := 10 * time.Millisecond
+
+	for i := 0; i < retries; i++ {
+		if runtime.GOOS == "windows" {
+			// On Windows, check if the target exists and is accessible
+			if _, err := os.Stat(newPath); err == nil {
+				// Try to remove existing file to avoid "file in use" errors
+				if removeErr := os.Remove(newPath); removeErr != nil {
+					// If remove fails, wait and retry
+					if i < retries-1 {
+						time.Sleep(delay)
+						delay *= 2 // Exponential backoff
+						continue
+					}
+					return fmt.Errorf("failed to remove existing file %s: %w", newPath, removeErr)
+				}
+			}
+		}
+
+		// Attempt the rename
+		if err := os.Rename(oldPath, newPath); err != nil {
+			// If rename fails and we have retries left, wait and try again
+			if i < retries-1 {
+				time.Sleep(delay)
+				delay *= 2 // Exponential backoff
+				continue
+			}
+			return fmt.Errorf("failed to rename %s to %s: %w", oldPath, newPath, err)
+		}
+
+		// Success
+		return nil
+	}
+
+	return fmt.Errorf("failed to rename %s to %s after %d retries", oldPath, newPath, retries)
 }

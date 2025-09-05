@@ -3,6 +3,7 @@ package parser
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -470,8 +471,8 @@ Sub agent prompt.`
 // TestParseFile_PermissionDenied tests handling of files without read permissions
 func TestParseFile_PermissionDenied(t *testing.T) {
 	// Skip this test on Windows where chmod doesn't work the same way
-	if os.Getenv("GOOS") == "windows" {
-		t.Skip("Skipping permission test on Windows")
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping permission test on Windows - different permission model")
 	}
 
 	tmpDir := t.TempDir()

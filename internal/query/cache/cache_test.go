@@ -194,6 +194,10 @@ func TestCacheManager_Persistence(t *testing.T) {
 	err = cm1.Save()
 	require.NoError(t, err)
 
+	// Close first cache manager to release any file handles
+	err = cm1.Close()
+	require.NoError(t, err)
+
 	// Create new cache manager with same path
 	cm2, err := NewCacheManager(cachePath, config)
 	require.NoError(t, err)

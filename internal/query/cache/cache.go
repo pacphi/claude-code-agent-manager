@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -181,20 +182,43 @@ func (cm *CacheManager) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp cache file: %w", err)
 	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to close temp cache file: %v\n", closeErr)
-		}
-	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(data); err != nil {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close temp cache file during cleanup: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove temp cache file during cleanup: %v\n", removeErr)
+		}
 		return fmt.Errorf("failed to encode cache data: %w", err)
 	}
 
-	// Atomic rename
-	if err := os.Rename(tempPath, cm.path); err != nil {
+	// Force sync to disk before closing (ensures data is written)
+	if err := file.Sync(); err != nil {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close temp cache file during cleanup: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove temp cache file during cleanup: %v\n", removeErr)
+		}
+		return fmt.Errorf("failed to sync temp cache file: %w", err)
+	}
+
+	// Close file before rename (critical on Windows)
+	if err := file.Close(); err != nil {
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove temp cache file during cleanup: %v\n", removeErr)
+		}
+		return fmt.Errorf("failed to close temp cache file: %w", err)
+	}
+
+	// Atomic rename - handle Windows file locking issues
+	if err := atomicRename(tempPath, cm.path); err != nil {
+		if removeErr := os.Remove(tempPath); removeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to remove temp cache file during cleanup: %v\n", removeErr)
+		}
 		return fmt.Errorf("failed to save cache file: %w", err)
 	}
 
@@ -305,4 +329,45 @@ func (cm *CacheManager) Close() error {
 	}
 
 	return cm.Save()
+}
+
+// atomicRename performs an atomic rename with proper Windows compatibility
+// It uses a retry mechanism to handle file locking issues on Windows
+func atomicRename(oldPath, newPath string) error {
+	retries := 3
+	delay := 10 * time.Millisecond
+
+	for i := 0; i < retries; i++ {
+		if runtime.GOOS == "windows" {
+			// On Windows, check if the target exists and is accessible
+			if _, err := os.Stat(newPath); err == nil {
+				// Try to remove existing file to avoid "file in use" errors
+				if removeErr := os.Remove(newPath); removeErr != nil {
+					// If remove fails, wait and retry
+					if i < retries-1 {
+						time.Sleep(delay)
+						delay *= 2 // Exponential backoff
+						continue
+					}
+					return fmt.Errorf("failed to remove existing file %s: %w", newPath, removeErr)
+				}
+			}
+		}
+
+		// Attempt the rename
+		if err := os.Rename(oldPath, newPath); err != nil {
+			// If rename fails and we have retries left, wait and try again
+			if i < retries-1 {
+				time.Sleep(delay)
+				delay *= 2 // Exponential backoff
+				continue
+			}
+			return fmt.Errorf("failed to rename %s to %s: %w", oldPath, newPath, err)
+		}
+
+		// Success
+		return nil
+	}
+
+	return fmt.Errorf("failed to rename %s to %s after %d retries", oldPath, newPath, retries)
 }

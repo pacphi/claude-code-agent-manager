@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -166,7 +167,14 @@ func setupCLITestDirectory(t *testing.T) string {
 }
 
 func buildTestBinary(t *testing.T) string {
-	tmpBinary := filepath.Join(os.TempDir(), "agent-manager-test-"+fmt.Sprintf("%d", time.Now().UnixNano()))
+	binaryName := "agent-manager-test-" + fmt.Sprintf("%d", time.Now().UnixNano())
+
+	// Add .exe extension on Windows
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+
+	tmpBinary := filepath.Join(os.TempDir(), binaryName)
 
 	cmd := exec.Command("go", "build", "-o", tmpBinary, "../../cmd/agent-manager")
 	err := cmd.Run()
