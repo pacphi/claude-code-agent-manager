@@ -347,10 +347,10 @@ The build process uses these key variables:
 
 ### Documentation Links
 
-- **[Build Guide](docs/BUILD.md)**: Detailed build instructions
-- **[Usage Guide](docs/USAGE.md)**: Command examples and workflows
-- **[Configuration Reference](docs/CONFIG.md)**: YAML configuration docs
-- **[Makefile](Makefile)**: Build targets and variables
+- **[Build Guide](BUILD.md)**: Detailed build instructions
+- **[CLI Reference](../reference/CLI-REFERENCE.md)**: Command examples and workflows
+- **[Configuration Reference](../guides/CONFIGURATION.md)**: YAML configuration docs
+- **[Makefile](../../Makefile)**: Build targets and variables
 
 ## Best Practices
 

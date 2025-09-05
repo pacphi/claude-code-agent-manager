@@ -24,6 +24,7 @@ type Installation struct {
 	Files         map[string]FileInfo `json:"files"`
 	Directories   []string            `json:"directories"`
 	DocsGenerated []string            `json:"docs_generated,omitempty"`
+	AgentMetadata []AgentInfo         `json:"agent_metadata,omitempty"`
 }
 
 // FileInfo contains information about an installed file
@@ -33,6 +34,20 @@ type FileInfo struct {
 	Size           int64     `json:"size"`
 	Modified       time.Time `json:"modified"`
 	WasPreExisting bool      `json:"was_pre_existing,omitempty"`
+}
+
+// AgentInfo contains metadata about an installed agent
+type AgentInfo struct {
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	Tools          []string  `json:"tools,omitempty"`
+	ToolsInherited bool      `json:"tools_inherited"`
+	FilePath       string    `json:"file_path"`
+	FileName       string    `json:"file_name"`
+	FileSize       int64     `json:"file_size"`
+	ModTime        time.Time `json:"mod_time"`
+	Source         string    `json:"source"`
+	InstalledAt    time.Time `json:"installed_at"`
 }
 
 // TrackingData represents the complete tracking data
@@ -296,4 +311,40 @@ func (t *Tracker) Restore(backupPath string) error {
 	}
 
 	return nil
+}
+
+// GetAllAgentMetadata returns all agent metadata across all installations
+func (t *Tracker) GetAllAgentMetadata() ([]AgentInfo, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	data, err := t.load()
+	if err != nil {
+		return nil, err
+	}
+
+	var allAgents []AgentInfo
+	for _, installation := range data.Installations {
+		allAgents = append(allAgents, installation.AgentMetadata...)
+	}
+
+	return allAgents, nil
+}
+
+// GetAgentMetadataBySource returns agent metadata for a specific source
+func (t *Tracker) GetAgentMetadataBySource(sourceName string) ([]AgentInfo, error) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	data, err := t.load()
+	if err != nil {
+		return nil, err
+	}
+
+	installation, exists := data.Installations[sourceName]
+	if !exists {
+		return nil, fmt.Errorf("source not found: %s", sourceName)
+	}
+
+	return installation.AgentMetadata, nil
 }

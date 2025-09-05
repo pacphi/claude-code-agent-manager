@@ -1,4 +1,4 @@
-.PHONY: build test install clean run help cross-compile
+.PHONY: build test install clean run help cross-compile benchmark benchmark-quick benchmark-profile benchmark-clean deps-upgrade
 
 # Variables
 BINARY_NAME := agent-manager
@@ -64,6 +64,13 @@ deps:
 	@go mod tidy
 	@echo "Dependencies updated"
 
+## deps-upgrade: Upgrade all dependencies to their latest versions
+deps-upgrade:
+	@echo "Upgrading all dependencies..."
+	@go get -u ./...
+	@go mod tidy
+	@echo "Dependencies upgraded to latest versions"
+
 ## fmt: Format Go code
 fmt:
 	@echo "Formatting code..."
@@ -124,6 +131,26 @@ release: clean cross-compile
 		fi \
 	done
 	@echo "Release artifacts created in releases/"
+
+## benchmark: Run performance benchmarks
+benchmark:
+	@echo "Running performance benchmarks..."
+	@./scripts/benchmark.sh
+
+## benchmark-quick: Run quick performance benchmarks
+benchmark-quick:
+	@echo "Running quick performance benchmarks..."
+	@./scripts/benchmark.sh --quick
+
+## benchmark-profile: Run benchmarks with detailed profiling
+benchmark-profile:
+	@echo "Running benchmarks with profiling..."
+	@./scripts/benchmark.sh --profile
+
+## benchmark-clean: Clean benchmark results
+benchmark-clean:
+	@echo "Cleaning benchmark results..."
+	@./scripts/benchmark.sh --clean
 
 ## dev: Run in development mode with hot reload (requires entr)
 dev:

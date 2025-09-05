@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type Settings struct {
 	ConcurrentDownloads int           `yaml:"concurrent_downloads"`
 	Timeout             time.Duration `yaml:"timeout"`
 	ContinueOnError     bool          `yaml:"continue_on_error"`
+	Query               QueryConfig   `yaml:"query,omitempty"`
 }
 
 // Source represents an agent source
@@ -107,6 +109,43 @@ type CacheConfig struct {
 	TTLHours  int  `yaml:"ttl_hours"`
 	MaxSizeMB int  `yaml:"max_size_mb"`
 	RefreshBg bool `yaml:"refresh_background"`
+}
+
+// QueryConfig contains query engine configuration
+type QueryConfig struct {
+	Enabled    bool             `yaml:"enabled"`
+	Index      IndexConfig      `yaml:"index,omitempty"`
+	Cache      QueryCacheConfig `yaml:"cache,omitempty"`
+	Validation ValidationConfig `yaml:"validation,omitempty"`
+	Defaults   DefaultsConfig   `yaml:"defaults,omitempty"`
+}
+
+// IndexConfig contains index configuration
+type IndexConfig struct {
+	Path            string        `yaml:"path,omitempty"`
+	AutoUpdate      bool          `yaml:"auto_update"`
+	RebuildInterval time.Duration `yaml:"rebuild_interval,omitempty"`
+}
+
+// QueryCacheConfig contains query cache configuration
+type QueryCacheConfig struct {
+	Enabled bool          `yaml:"enabled"`
+	TTL     time.Duration `yaml:"ttl,omitempty"`
+	MaxSize string        `yaml:"max_size,omitempty"`
+}
+
+// ValidationConfig contains validation settings
+type ValidationConfig struct {
+	CheckNameFormat     bool `yaml:"check_name_format"`
+	CheckRequiredFields bool `yaml:"check_required_fields"`
+	CheckToolValidity   bool `yaml:"check_tool_validity"`
+}
+
+// DefaultsConfig contains query defaults
+type DefaultsConfig struct {
+	Format string `yaml:"format,omitempty"`
+	Limit  int    `yaml:"limit,omitempty"`
+	Fuzzy  bool   `yaml:"fuzzy"`
 }
 
 // Metadata contains tracking and logging configuration
@@ -230,11 +269,63 @@ func applyDefaults(cfg *Config) {
 		cfg.Metadata.LockFile = ".claude/.lock"
 	}
 
+	// Apply query configuration defaults
+	applyQueryDefaults(&cfg.Settings.Query, cfg.Settings.BaseDir)
+
 	// Apply defaults to sources
 	for i := range cfg.Sources {
 		if cfg.Sources[i].Branch == "" && cfg.Sources[i].Type == "github" {
 			cfg.Sources[i].Branch = "main"
 		}
+	}
+}
+
+// applyQueryDefaults sets default values for query configuration
+func applyQueryDefaults(query *QueryConfig, baseDir string) {
+	// Enable query functionality by default
+	if !query.Enabled {
+		query.Enabled = true
+	}
+
+	// Index defaults
+	if query.Index.Path == "" {
+		query.Index.Path = filepath.Join(baseDir, ".agent-index")
+	}
+	if query.Index.RebuildInterval == 0 {
+		query.Index.RebuildInterval = 24 * time.Hour
+	}
+
+	// Cache defaults
+	if !query.Cache.Enabled {
+		query.Cache.Enabled = true
+	}
+	if query.Cache.TTL == 0 {
+		query.Cache.TTL = time.Hour
+	}
+	if query.Cache.MaxSize == "" {
+		query.Cache.MaxSize = "100MB"
+	}
+
+	// Validation defaults
+	if !query.Validation.CheckNameFormat {
+		query.Validation.CheckNameFormat = true
+	}
+	if !query.Validation.CheckRequiredFields {
+		query.Validation.CheckRequiredFields = true
+	}
+	if !query.Validation.CheckToolValidity {
+		query.Validation.CheckToolValidity = true
+	}
+
+	// Query defaults
+	if query.Defaults.Format == "" {
+		query.Defaults.Format = "table"
+	}
+	if query.Defaults.Limit == 0 {
+		query.Defaults.Limit = 20
+	}
+	if !query.Defaults.Fuzzy {
+		query.Defaults.Fuzzy = true
 	}
 }
 

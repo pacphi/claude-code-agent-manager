@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/pacphi/claude-code-agent-manager/internal/conflict"
 	"github.com/pacphi/claude-code-agent-manager/internal/progress"
+	"github.com/pacphi/claude-code-agent-manager/internal/query/parser"
 	"github.com/pacphi/claude-code-agent-manager/internal/tracker"
 	"github.com/pacphi/claude-code-agent-manager/internal/transformer"
 	"github.com/pacphi/claude-code-agent-manager/internal/util"
@@ -86,6 +88,18 @@ func (i *Installer) InstallSource(source config.Source) error {
 	// Run post-install actions
 	if err := i.runPostInstallActions(source); err != nil {
 		return err
+	}
+
+	// Extract agent metadata for query indexing
+	if !i.options.DryRun {
+		agentMetadata := i.extractAgentMetadata(source.Name, transformedFiles, fetchedPath)
+		if len(agentMetadata) > 0 {
+			// Store agent metadata in installation
+			installation.AgentMetadata = agentMetadata
+			if i.options.Verbose {
+				color.Green("Extracted metadata for %d agents\n", len(agentMetadata))
+			}
+		}
 	}
 
 	// Save installation tracking
@@ -617,4 +631,75 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// extractAgentMetadata parses agent files and extracts metadata
+func (i *Installer) extractAgentMetadata(sourceName string, files []string, basePath string) []tracker.AgentInfo {
+	// Pre-filter markdown files to optimize memory allocation
+	mdFiles := i.preFilterMarkdownFiles(files)
+	if len(mdFiles) == 0 {
+		return nil // Early return if no markdown files
+	}
+
+	// Allocate with optimal capacity based on filtered files
+	agentMetadata := make([]tracker.AgentInfo, 0, len(mdFiles))
+	agentParser := parser.NewParser()
+
+	// Process only pre-filtered markdown files
+	for _, relPath := range mdFiles {
+		fullPath := filepath.Join(basePath, relPath)
+
+		// Parse the agent file
+		agentSpec, err := agentParser.ParseFile(fullPath)
+		if err != nil {
+			// Skip files that can't be parsed as agents (not all .md files are agents)
+			continue
+		}
+
+		// Convert to AgentInfo for storage in tracker - build struct more efficiently
+		agentInfo := tracker.AgentInfo{
+			Name:           agentSpec.Name,
+			Description:    agentSpec.Description,
+			Tools:          agentSpec.Tools,
+			ToolsInherited: agentSpec.ToolsInherited,
+			FilePath:       agentSpec.FilePath,
+			FileName:       agentSpec.FileName,
+			FileSize:       agentSpec.FileSize,
+			ModTime:        agentSpec.ModTime,
+			Source:         sourceName,
+			InstalledAt:    time.Now(),
+		}
+
+		agentMetadata = append(agentMetadata, agentInfo)
+	}
+
+	return agentMetadata
+}
+
+// preFilterMarkdownFiles efficiently filters files to only markdown files
+func (i *Installer) preFilterMarkdownFiles(files []string) []string {
+	if len(files) == 0 {
+		return nil
+	}
+
+	// Pre-allocate with estimated capacity (most repos have some non-md files)
+	estimatedMdFiles := len(files) / 3 // Reasonable estimate
+	if estimatedMdFiles < 1 {
+		estimatedMdFiles = 1
+	}
+
+	mdFiles := make([]string, 0, estimatedMdFiles)
+
+	for _, file := range files {
+		if strings.HasSuffix(file, ".md") {
+			mdFiles = append(mdFiles, file)
+		}
+	}
+
+	// If our estimate was wrong, return nil for empty results
+	if len(mdFiles) == 0 {
+		return nil
+	}
+
+	return mdFiles
 }
