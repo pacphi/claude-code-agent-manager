@@ -184,7 +184,10 @@ func buildTestBinary(t *testing.T) string {
 }
 
 func setupCLITestEnvironment(t *testing.T, testDir string) {
-	// Create config file
+	// Create config file with Windows-safe path handling
+	// Convert to forward slashes for cross-platform YAML compatibility
+	normalizedTestDir := filepath.ToSlash(testDir)
+
 	configContent := fmt.Sprintf(`version: "1.0"
 settings:
   base_dir: "%s/agents"
@@ -215,7 +218,7 @@ sources:
 metadata:
   tracking_file: "%s/.installed-agents.json"
   log_file: "%s/installation.log"
-`, testDir, testDir, testDir, testDir, testDir, testDir)
+`, normalizedTestDir, normalizedTestDir, normalizedTestDir, normalizedTestDir, normalizedTestDir, normalizedTestDir)
 
 	configPath := filepath.Join(testDir, "agents-config.yaml")
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
