@@ -157,12 +157,6 @@ agent-manager marketplace <subcommand> [options]
 | `--category` | Filter by category | All categories |
 | `--limit` | Maximum results | `20` |
 
-**Show Options:**
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--content` | Include full agent content | `false` |
-
 **Examples:**
 
 ```bash

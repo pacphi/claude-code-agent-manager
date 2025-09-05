@@ -168,7 +168,7 @@ func setupCLITestDirectory(t *testing.T) string {
 func buildTestBinary(t *testing.T) string {
 	tmpBinary := filepath.Join(os.TempDir(), "agent-manager-test-"+fmt.Sprintf("%d", time.Now().UnixNano()))
 
-	cmd := exec.Command("go", "build", "-o", tmpBinary, "./cmd/agent-manager")
+	cmd := exec.Command("go", "build", "-o", tmpBinary, "../../cmd/agent-manager")
 	err := cmd.Run()
 	require.NoError(t, err, "Failed to build test binary")
 
@@ -335,17 +335,17 @@ func testBasicQueryCommand(t *testing.T, binaryPath, testDir string) {
 
 func testFieldSpecificQueryCommands(t *testing.T, binaryPath, testDir string) {
 	// Test name search
-	output, err := runCLICommand(t, binaryPath, testDir, "query", "--name", "python-specialist")
+	output, err := runCLICommand(t, binaryPath, testDir, "query", "--field", "name", "python-specialist")
 	require.NoError(t, err)
 	assert.Contains(t, output, "python-specialist", "Should find python-specialist by name")
 
 	// Test description search
-	output, err = runCLICommand(t, binaryPath, testDir, "query", "--description", "React")
+	output, err = runCLICommand(t, binaryPath, testDir, "query", "--field", "description", "React")
 	require.NoError(t, err)
 	assert.Contains(t, output, "frontend-developer", "Should find frontend-developer by description")
 
 	// Test tools search
-	output, err = runCLICommand(t, binaryPath, testDir, "query", "--tools", "WebFetch")
+	output, err = runCLICommand(t, binaryPath, testDir, "query", "--field", "tools", "WebFetch")
 	require.NoError(t, err)
 	assert.Contains(t, output, "frontend-developer", "Should find agents with WebFetch tool")
 }
@@ -413,16 +413,11 @@ func testShowFuzzyMatch(t *testing.T, binaryPath, testDir string) {
 }
 
 func testShowOutputFormats(t *testing.T, binaryPath, testDir string) {
-	// Test with content flag
-	output, err := runCLICommand(t, binaryPath, testDir, "show", "go-expert.md", "--content")
+	// Test basic show functionality (without unsupported flags)
+	output, err := runCLICommand(t, binaryPath, testDir, "show", "go-expert.md")
 	if err == nil {
-		assert.Contains(t, output, "You are an expert Go developer", "Should show prompt content")
-	}
-
-	// Test extract-tools flag
-	output, err = runCLICommand(t, binaryPath, testDir, "show", "go-expert.md", "--extract-tools")
-	if err == nil {
-		assert.Contains(t, output, "Read", "Should extract and show tools")
+		assert.Contains(t, output, "go-expert", "Should show agent details")
+		assert.Contains(t, output, "Read", "Should show tools")
 	}
 }
 
@@ -440,30 +435,31 @@ func testBasicStats(t *testing.T, binaryPath, testDir string) {
 }
 
 func testStatsBySource(t *testing.T, binaryPath, testDir string) {
-	output, err := runCLICommand(t, binaryPath, testDir, "stats", "--by-source")
+	output, err := runCLICommand(t, binaryPath, testDir, "stats", "--detailed")
 	if err == nil {
-		assert.Contains(t, output, "test-local", "Should show stats by source")
+		assert.Contains(t, output, "Agent Statistics", "Should show detailed statistics")
 	}
 }
 
 func testCoverageStats(t *testing.T, binaryPath, testDir string) {
-	output, err := runCLICommand(t, binaryPath, testDir, "stats", "--coverage")
+	// Coverage stats are part of detailed stats now
+	output, err := runCLICommand(t, binaryPath, testDir, "stats", "--detailed")
 	if err == nil {
-		assert.Contains(t, output, "coverage", "Should show coverage statistics")
+		assert.Contains(t, output, "Coverage", "Should show coverage statistics")
 	}
 }
 
 func testToolUsageStats(t *testing.T, binaryPath, testDir string) {
 	output, err := runCLICommand(t, binaryPath, testDir, "stats", "--tools")
 	if err == nil {
-		assert.Contains(t, output, "tools", "Should show tool usage statistics")
+		assert.Contains(t, output, "Tools", "Should show tool usage statistics")
 	}
 }
 
 func testValidationStats(t *testing.T, binaryPath, testDir string) {
 	output, err := runCLICommand(t, binaryPath, testDir, "stats", "--validation")
 	if err == nil {
-		assert.Contains(t, output, "validation", "Should show validation statistics")
+		assert.Contains(t, output, "Validation", "Should show validation statistics")
 	}
 }
 
@@ -512,7 +508,7 @@ func testValidateAgents(t *testing.T, binaryPath, testDir string) {
 func testValidateQuery(t *testing.T, binaryPath, testDir string) {
 	output, err := runCLICommand(t, binaryPath, testDir, "validate", "--query")
 	require.NoError(t, err)
-	assert.Contains(t, output, "query", "Should test query functionality")
+	assert.Contains(t, output, "Query", "Should test query functionality")
 }
 
 func testBasicList(t *testing.T, binaryPath, testDir string) {

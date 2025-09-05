@@ -81,12 +81,6 @@ View detailed information about a specific agent:
 agent-manager marketplace show "code-reviewer"
 ```
 
-Show agent with full definition (when available):
-
-```bash
-agent-manager marketplace show "documentation-expert" --content
-```
-
 ### Refresh Cache
 
 Update cached marketplace data:
