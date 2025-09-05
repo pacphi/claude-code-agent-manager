@@ -270,20 +270,44 @@ func (cm *CacheManager) load() error {
 	return nil
 }
 
-// evictOldest removes the oldest entry based on access time
+// evictOldest removes the oldest entry based on creation time, then access time
 func (cm *CacheManager) evictOldest() {
 	if len(cm.entries) == 0 {
 		return
 	}
 
 	var oldestKey string
-	var oldestTime time.Time
+	var oldestCreated time.Time
+	var oldestAccessed time.Time
 
-	// Find oldest entry by access time
+	// Find oldest entry by creation time first, then access time for tie-breaking
+	// This ensures consistent eviction order when entries are created rapidly
 	for key, entry := range cm.entries {
-		if oldestKey == "" || entry.AccessedAt.Before(oldestTime) {
+		if oldestKey == "" {
 			oldestKey = key
-			oldestTime = entry.AccessedAt
+			oldestCreated = entry.CreatedAt
+			oldestAccessed = entry.AccessedAt
+		} else {
+			// Primary sort: creation time (oldest first)
+			if entry.CreatedAt.Before(oldestCreated) {
+				oldestKey = key
+				oldestCreated = entry.CreatedAt
+				oldestAccessed = entry.AccessedAt
+			} else if entry.CreatedAt.Equal(oldestCreated) {
+				// Secondary sort: access time (oldest first) for entries created at the same time
+				if entry.AccessedAt.Before(oldestAccessed) {
+					oldestKey = key
+					oldestCreated = entry.CreatedAt
+					oldestAccessed = entry.AccessedAt
+				} else if entry.AccessedAt.Equal(oldestAccessed) {
+					// Tertiary sort: key name for deterministic behavior when times are identical
+					if key < oldestKey {
+						oldestKey = key
+						oldestCreated = entry.CreatedAt
+						oldestAccessed = entry.AccessedAt
+					}
+				}
+			}
 		}
 	}
 
