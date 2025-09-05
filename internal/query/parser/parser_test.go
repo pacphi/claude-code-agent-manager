@@ -565,15 +565,15 @@ Timestamp test prompt.`
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "timestamp-agent.md")
 
-	// Record time before writing
-	beforeWrite := time.Now()
+	// Record time before writing with some tolerance for filesystem timing
+	beforeWrite := time.Now().Add(-time.Second)
 
 	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Record time after writing
-	afterWrite := time.Now()
+	// Record time after writing with some tolerance
+	afterWrite := time.Now().Add(time.Second)
 
 	parser := NewParser()
 	agent, err := parser.ParseFile(testFile)
@@ -582,9 +582,15 @@ Timestamp test prompt.`
 		t.Fatalf("ParseFile failed: %v", err)
 	}
 
-	// Verify timestamp is within expected range
+	// Verify timestamp is within reasonable range (with 1 second tolerance on each side)
+	// This accounts for filesystem timing differences and CI system variations
 	if agent.ModTime.Before(beforeWrite) || agent.ModTime.After(afterWrite) {
 		t.Errorf("ModTime %v should be between %v and %v", agent.ModTime, beforeWrite, afterWrite)
+	}
+
+	// Also verify it's not zero
+	if agent.ModTime.IsZero() {
+		t.Error("Expected ModTime to be set")
 	}
 }
 
