@@ -8,6 +8,7 @@ bin/
 *.dylib
 *.test
 *.out
+agent-manager
 
 # Go workspace files
 go.work
@@ -166,6 +167,9 @@ debug.test
 # Utility artifacts
 backups/
 .installed-agents.json
+
+# Planning documentation
+project-documentation/
 
 # NOTE: go.sum is intentionally NOT ignored
 # go.sum should be committed for reproducible builds

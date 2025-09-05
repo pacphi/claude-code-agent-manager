@@ -5,6 +5,7 @@ This document provides a complete reference for the Agent Manager YAML configura
 ## Configuration File Location
 
 Default locations (in order of preference):
+
 1. `--config` command-line flag
 2. `AGENT_MANAGER_CONFIG` environment variable
 3. `agents-config.yaml` in current directory
