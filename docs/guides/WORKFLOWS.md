@@ -289,7 +289,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./bin/agent-manager update
-          ./bin/agent-manager list --format json > agents-inventory.json
+          ./bin/agent-manager list > agents-inventory.txt
 
       - name: Commit Updates
         run: |
@@ -308,10 +308,10 @@ update-agents:
   script:
     - make build
     - ./bin/agent-manager update
-    - ./bin/agent-manager list --format json > agents.json
+    - ./bin/agent-manager list > agents.txt
   artifacts:
     paths:
-      - agents.json
+      - agents.txt
     expire_in: 1 week
   only:
     - schedules
@@ -395,27 +395,30 @@ agent-manager stats --detailed
 ### Agent Quality Assurance
 
 ```bash
-# Validate all agents against Claude Code spec
+# Validate configuration file
+agent-manager validate
+
+# Validate all installed agents
 agent-manager validate --agents
 
-# Check for common issues
-agent-manager validate --agents --check-names --check-duplicates --check-tools
-
-# Validate specific agent
-agent-manager validate --agent code-reviewer --check-required
+# Test query functionality
+agent-manager validate --query
 ```
 
 ### Performance Optimization
 
 ```bash
 # Build search index for fast queries
-agent-manager index --build
+agent-manager index build
 
-# Check index performance
-agent-manager index --status --cache-stats
+# Check index statistics
+agent-manager index stats
+
+# Check cache performance
+agent-manager index cache-stats
 
 # Update index after installations
-agent-manager index --update
+agent-manager index build
 ```
 
 ## Maintenance Workflows
@@ -453,7 +456,7 @@ tar -czf agents-backup.tar.gz ~/.claude/agents
 
 ```bash
 # On old system
-agent-manager list --format json > agents-manifest.json
+agent-manager list > agents-manifest.txt
 tar -czf agent-data.tar.gz ~/.claude/agents ~/.agent-manager
 
 # On new system

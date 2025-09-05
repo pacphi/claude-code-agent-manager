@@ -212,11 +212,14 @@ agent-manager update
 #### "No results found" for known agents
 
 ```bash
-# Rebuild the search index
-agent-manager index --build
+# Test if the query system is working
+agent-manager validate --query
 
-# Check index status
-agent-manager index --status
+# Rebuild the search index
+agent-manager index rebuild
+
+# Check index statistics
+agent-manager index stats
 
 # Verify agents are actually installed
 agent-manager list
@@ -225,14 +228,14 @@ agent-manager list
 #### Slow query performance
 
 ```bash
-# Check if indexing is enabled
-agent-manager index --status
+# Check index statistics
+agent-manager index stats
 
 # Build index if not present
-agent-manager index --build
+agent-manager index build
 
 # Clear cache if stale
-agent-manager index --cache-clear
+agent-manager index cache-clear
 ```
 
 #### "Agent not found" with show command
@@ -244,8 +247,8 @@ agent-manager query "partial-name"
 # List all agents to see exact names
 agent-manager list
 
-# Use exact matching
-agent-manager show exact-name --exact
+# Show specific agent (fuzzy matching is built-in)
+agent-manager show exact-name
 ```
 
 ### State and Tracking Issues
@@ -270,7 +273,7 @@ agent-manager install
 
 ```bash
 # Rebuild tracking
-agent-manager list --rebuild-state
+agent-manager index rebuild
 
 # Manual state verification
 find ~/.claude/agents -type f | wc -l

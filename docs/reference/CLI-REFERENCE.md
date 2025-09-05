@@ -124,8 +124,6 @@ agent-manager list [options]
 | `--custom-tools` | | Show agents with explicit tools only | `false` |
 | `--limit` | | Limit number of results | `50` |
 
-*Note: Format options (json/tree/csv) are not implemented in the list command. Use the query command with --output option for different formats.*
-
 **Examples:**
 
 ```bash
@@ -302,6 +300,7 @@ agent-manager validate [options]
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--agents` | Validate all agent files | `false` |
+| `--query` | Test agent search system (use if `query` commands fail) | `false` |
 
 **Examples:**
 
@@ -311,6 +310,9 @@ agent-manager validate
 
 # Validate all agents
 agent-manager validate --agents
+
+# Test query functionality
+agent-manager validate --query
 ```
 
 ### version

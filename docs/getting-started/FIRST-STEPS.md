@@ -150,11 +150,8 @@ agent-manager query --description "typescript"
 # Find agents using specific tools
 agent-manager query --tools "Read,Write"
 
-# Get detailed info about a specific agent
+# Get detailed info about a specific agent (includes tools used)
 agent-manager show code-reviewer
-
-# See what tools an agent uses
-agent-manager show code-reviewer --extract-tools
 ```
 
 ### Analyze Your Installation
