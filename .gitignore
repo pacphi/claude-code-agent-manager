@@ -169,6 +169,7 @@ backups/
 .installed-agents.json
 
 # Other
+.claude
 examples/
 project-documentation
 
