@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestParseFile_Valid tests parsing of a valid agent file with all fields
@@ -46,12 +48,12 @@ Follow these guidelines...`
 	}
 
 	expectedTools := []string{"Read", "Write", "Edit"}
-	if len(agent.Tools) != len(expectedTools) {
-		t.Errorf("Expected %d tools, got %d", len(expectedTools), len(agent.Tools))
+	if len(agent.GetToolsAsSlice()) != len(expectedTools) {
+		t.Errorf("Expected %d tools, got %d", len(expectedTools), len(agent.GetToolsAsSlice()))
 	}
 	for i, tool := range expectedTools {
-		if i >= len(agent.Tools) || agent.Tools[i] != tool {
-			t.Errorf("Expected tool[%d] to be '%s', got '%s'", i, tool, agent.Tools[i])
+		if i >= len(agent.GetToolsAsSlice()) || agent.GetToolsAsSlice()[i] != tool {
+			t.Errorf("Expected tool[%d] to be '%s', got '%s'", i, tool, agent.GetToolsAsSlice()[i])
 		}
 	}
 
@@ -113,8 +115,8 @@ Simple agent prompt.`
 		t.Error("Expected ToolsInherited to be true when no tools specified")
 	}
 
-	if len(agent.Tools) != 0 {
-		t.Errorf("Expected empty tools slice, got %v", agent.Tools)
+	if len(agent.GetToolsAsSlice()) != 0 {
+		t.Errorf("Expected empty tools slice, got %v", agent.GetToolsAsSlice())
 	}
 
 	if agent.Prompt != "Simple agent prompt." {
@@ -149,8 +151,8 @@ Agent with empty tools.`
 		t.Error("Expected ToolsInherited to be true when tools array is empty")
 	}
 
-	if len(agent.Tools) != 0 {
-		t.Errorf("Expected empty tools slice, got %v", agent.Tools)
+	if len(agent.GetToolsAsSlice()) != 0 {
+		t.Errorf("Expected empty tools slice, got %v", agent.GetToolsAsSlice())
 	}
 }
 
@@ -583,5 +585,216 @@ Timestamp test prompt.`
 	// Verify timestamp is within expected range
 	if agent.ModTime.Before(beforeWrite) || agent.ModTime.After(afterWrite) {
 		t.Errorf("ModTime %v should be between %v and %v", agent.ModTime, beforeWrite, afterWrite)
+	}
+}
+
+// TestFlexibleTools_StringFormat tests that tools can be parsed from comma-separated string
+func TestFlexibleTools_StringFormat(t *testing.T) {
+	yamlContent := `---
+name: test-agent
+description: A test agent
+tools: Read, Write, Edit, MultiEdit, Bash
+---
+
+This is the test prompt content.
+`
+
+	tmpFile, err := os.CreateTemp("", "test-agent-*.md")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(yamlContent); err != nil {
+		t.Fatalf("Failed to write temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	parser := NewParser()
+	agent, err := parser.ParseFile(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("ParseFile failed: %v", err)
+	}
+
+	expected := []string{"Read", "Write", "Edit", "MultiEdit", "Bash"}
+	tools := agent.GetToolsAsSlice()
+
+	if len(tools) != len(expected) {
+		t.Errorf("Expected %d tools, got %d", len(expected), len(tools))
+	}
+
+	for i, expectedTool := range expected {
+		if i >= len(tools) || tools[i] != expectedTool {
+			t.Errorf("Expected tool[%d] to be '%s', got '%s'", i, expectedTool, tools[i])
+		}
+	}
+
+	if agent.ToolsInherited {
+		t.Error("Expected ToolsInherited to be false when tools are explicitly specified")
+	}
+}
+
+// TestFlexibleTools_ArrayFormat tests that tools can be parsed from YAML array
+func TestFlexibleTools_ArrayFormat(t *testing.T) {
+	yamlContent := `---
+name: test-agent
+description: A test agent
+tools:
+  - Read
+  - Write
+  - Edit
+  - MultiEdit
+  - Bash
+---
+
+This is the test prompt content.
+`
+
+	tmpFile, err := os.CreateTemp("", "test-agent-*.md")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(yamlContent); err != nil {
+		t.Fatalf("Failed to write temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	parser := NewParser()
+	agent, err := parser.ParseFile(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("ParseFile failed: %v", err)
+	}
+
+	expected := []string{"Read", "Write", "Edit", "MultiEdit", "Bash"}
+	tools := agent.GetToolsAsSlice()
+
+	if len(tools) != len(expected) {
+		t.Errorf("Expected %d tools, got %d", len(expected), len(tools))
+	}
+
+	for i, expectedTool := range expected {
+		if i >= len(tools) || tools[i] != expectedTool {
+			t.Errorf("Expected tool[%d] to be '%s', got '%s'", i, expectedTool, tools[i])
+		}
+	}
+
+	if agent.ToolsInherited {
+		t.Error("Expected ToolsInherited to be false when tools are explicitly specified")
+	}
+}
+
+// TestFlexibleTools_EmptyString tests handling of empty string tools
+func TestFlexibleTools_EmptyString(t *testing.T) {
+	yamlContent := `---
+name: test-agent
+description: A test agent
+tools: ""
+---
+
+This is the test prompt content.
+`
+
+	tmpFile, err := os.CreateTemp("", "test-agent-*.md")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(yamlContent); err != nil {
+		t.Fatalf("Failed to write temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	parser := NewParser()
+	agent, err := parser.ParseFile(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("ParseFile failed: %v", err)
+	}
+
+	tools := agent.GetToolsAsSlice()
+	if len(tools) != 0 {
+		t.Errorf("Expected empty tools slice for empty string, got %v", tools)
+	}
+
+	if !agent.ToolsInherited {
+		t.Error("Expected ToolsInherited to be true when tools is empty string")
+	}
+}
+
+// TestFlexibleTools_DirectUnmarshal tests the UnmarshalYAML method directly
+func TestFlexibleTools_DirectUnmarshal(t *testing.T) {
+	tests := []struct {
+		name     string
+		yaml     string
+		expected []string
+		wantErr  bool
+	}{
+		{
+			name:     "string format",
+			yaml:     `"Read, Write, Edit"`,
+			expected: []string{"Read", "Write", "Edit"},
+			wantErr:  false,
+		},
+		{
+			name:     "array format",
+			yaml:     `["Read", "Write", "Edit"]`,
+			expected: []string{"Read", "Write", "Edit"},
+			wantErr:  false,
+		},
+		{
+			name:     "empty string",
+			yaml:     `""`,
+			expected: []string{},
+			wantErr:  false,
+		},
+		{
+			name:     "single tool string",
+			yaml:     `"Read"`,
+			expected: []string{"Read"},
+			wantErr:  false,
+		},
+		{
+			name:     "string with spaces",
+			yaml:     `"Read , Write , Edit "`,
+			expected: []string{"Read", "Write", "Edit"},
+			wantErr:  false,
+		},
+		{
+			name:     "number format",
+			yaml:     `123`,
+			expected: []string{"123"},
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var ft FlexibleTools
+			err := yaml.Unmarshal([]byte(tt.yaml), &ft)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			tools := ft.GetTools()
+			if len(tools) != len(tt.expected) {
+				t.Errorf("Expected %d tools, got %d", len(tt.expected), len(tools))
+			}
+
+			for i, expected := range tt.expected {
+				if i >= len(tools) || tools[i] != expected {
+					t.Errorf("Expected tool[%d] to be '%s', got '%s'", i, expected, tools[i])
+				}
+			}
+		})
 	}
 }

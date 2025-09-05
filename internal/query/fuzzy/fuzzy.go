@@ -104,7 +104,7 @@ func (fm *FuzzyMatcher) ScoreByField(agent *parser.AgentSpec, field, query strin
 	case "prompt", "content":
 		target = agent.Prompt
 	case "tools":
-		target = strings.Join(agent.Tools, " ")
+		target = strings.Join(agent.GetToolsAsSlice(), " ")
 	case "source":
 		target = agent.Source
 	default:

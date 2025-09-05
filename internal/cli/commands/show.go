@@ -111,11 +111,11 @@ func (c *ShowCommand) displayAgentDetails(agent *parser.AgentSpec, sharedCtx *Sh
 	fmt.Printf("\nTools: ")
 	if agent.ToolsInherited {
 		color.Yellow("inherited from parent\n")
-	} else if len(agent.Tools) == 0 {
+	} else if len(agent.GetToolsAsSlice()) == 0 {
 		color.Red("none specified\n")
 	} else {
 		fmt.Println()
-		for _, tool := range agent.Tools {
+		for _, tool := range agent.GetToolsAsSlice() {
 			fmt.Printf("  - %s\n", tool)
 		}
 	}

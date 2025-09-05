@@ -209,7 +209,7 @@ func (c *QueryCommand) executeRegexFieldQuery(queryEngine *engine.Engine, opts e
 		case "content", "prompt":
 			fieldValue = agent.Prompt
 		case "tools":
-			fieldValue = strings.Join(agent.Tools, " ")
+			fieldValue = strings.Join(agent.GetToolsAsSlice(), " ")
 		case "source":
 			fieldValue = agent.Source
 		default:
@@ -307,7 +307,7 @@ func (c *QueryCommand) matchAgentField(agent *parser.AgentSpec, field string, pa
 	case "content", "prompt":
 		fieldValue = agent.Prompt
 	case "tools":
-		fieldValue = strings.Join(agent.Tools, " ")
+		fieldValue = strings.Join(agent.GetToolsAsSlice(), " ")
 	case "source":
 		fieldValue = agent.Source
 	default:
@@ -412,11 +412,11 @@ func (c *QueryCommand) outputTable(results []*parser.AgentSpec) error {
 		toolsStr := ""
 		if agent.ToolsInherited {
 			toolsStr = "inherited"
-		} else if len(agent.Tools) > 0 {
-			if len(agent.Tools) == 1 {
-				toolsStr = agent.Tools[0]
+		} else if len(agent.GetToolsAsSlice()) > 0 {
+			if len(agent.GetToolsAsSlice()) == 1 {
+				toolsStr = agent.GetToolsAsSlice()[0]
 			} else {
-				toolsStr = fmt.Sprintf("%s (+%d)", agent.Tools[0], len(agent.Tools)-1)
+				toolsStr = fmt.Sprintf("%s (+%d)", agent.GetToolsAsSlice()[0], len(agent.GetToolsAsSlice())-1)
 			}
 		}
 		toolsStr = c.truncate(toolsStr, 14)

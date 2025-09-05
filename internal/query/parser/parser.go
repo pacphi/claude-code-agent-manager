@@ -10,12 +10,50 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// FlexibleTools is a custom type that can unmarshal both string and array formats
+type FlexibleTools []string
+
+// UnmarshalYAML implements custom YAML unmarshaling for tools field
+func (ft *FlexibleTools) UnmarshalYAML(node *yaml.Node) error {
+	// Try to unmarshal as array first
+	var toolsArray []string
+	if err := node.Decode(&toolsArray); err == nil {
+		*ft = FlexibleTools(toolsArray)
+		return nil
+	}
+
+	// If array unmarshaling fails, try as string
+	var toolsString string
+	if err := node.Decode(&toolsString); err != nil {
+		return fmt.Errorf("tools field must be either a string or array of strings: %w", err)
+	}
+
+	// Parse comma-separated string into array
+	if strings.TrimSpace(toolsString) == "" {
+		*ft = FlexibleTools{}
+		return nil
+	}
+
+	tools := strings.Split(toolsString, ",")
+	for i, tool := range tools {
+		tools[i] = strings.TrimSpace(tool)
+	}
+
+	*ft = FlexibleTools(tools)
+	return nil
+}
+
+// GetTools returns tools as []string for compatibility
+func (ft FlexibleTools) GetTools() []string {
+	return []string(ft)
+}
+
 // AgentSpec represents a Claude Code subagent
 type AgentSpec struct {
 	// YAML frontmatter fields
-	Name        string   `yaml:"name" json:"name"`
-	Description string   `yaml:"description" json:"description"`
-	Tools       []string `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Name        string        `yaml:"name" json:"name"`
+	Description string        `yaml:"description" json:"description"`
+	Tools       FlexibleTools `yaml:"tools,omitempty" json:"tools,omitempty"`
 
 	// Derived fields
 	ToolsInherited bool   `json:"tools_inherited"`
@@ -30,6 +68,11 @@ type AgentSpec struct {
 	// Installation metadata
 	Source      string    `json:"source,omitempty"`
 	InstalledAt time.Time `json:"installed_at,omitempty"`
+}
+
+// GetToolsAsSlice returns tools as []string for compatibility with existing code
+func (a *AgentSpec) GetToolsAsSlice() []string {
+	return a.Tools.GetTools()
 }
 
 // Parser extracts agent specifications
@@ -63,7 +106,7 @@ func (p *Parser) ParseFile(path string) (*AgentSpec, error) {
 	spec.Prompt = strings.TrimSpace(parts[2])
 
 	// Handle tools field - if empty or nil, mark as inherited
-	if len(spec.Tools) == 0 {
+	if len(spec.Tools.GetTools()) == 0 {
 		spec.ToolsInherited = true
 	}
 

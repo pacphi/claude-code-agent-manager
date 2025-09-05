@@ -103,7 +103,7 @@ func (c *Calculator) calculateCoverage() CoverageStats {
 			fieldsPresent++
 		}
 
-		if len(agent.Tools) > 0 {
+		if len(agent.GetToolsAsSlice()) > 0 {
 			coverage.WithTools++
 		}
 
@@ -138,7 +138,7 @@ func (c *Calculator) calculateToolUsage() ToolStats {
 		} else {
 			stats.ExplicitTools++
 			// Count tool usage
-			for _, tool := range agent.Tools {
+			for _, tool := range agent.GetToolsAsSlice() {
 				stats.ToolDistribution[tool]++
 			}
 		}

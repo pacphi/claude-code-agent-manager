@@ -166,7 +166,7 @@ func (im *IndexManager) SearchByTools(tools []string) ([]*parser.AgentSpec, erro
 		hasAll := true
 		for _, tool := range tools {
 			found := false
-			for _, agentTool := range agent.Tools {
+			for _, agentTool := range agent.GetToolsAsSlice() {
 				if agentTool == tool {
 					found = true
 					break

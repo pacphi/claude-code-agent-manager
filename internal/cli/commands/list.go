@@ -251,8 +251,8 @@ func (c *ListCommand) printAgentSummary(agent *parser.AgentSpec) {
 	fmt.Printf("  %s\n", agent.Description)
 	fmt.Printf("  Source: %s | File: %s\n", agent.Source, agent.FileName)
 
-	if !agent.ToolsInherited && len(agent.Tools) > 0 {
-		fmt.Printf("  Tools: %s\n", strings.Join(agent.Tools, ", "))
+	if !agent.ToolsInherited && len(agent.GetToolsAsSlice()) > 0 {
+		fmt.Printf("  Tools: %s\n", strings.Join(agent.GetToolsAsSlice(), ", "))
 	} else if agent.ToolsInherited {
 		fmt.Printf("  Tools: inherited\n")
 	}
