@@ -80,7 +80,7 @@ func (c *StatsCommand) Execute(sharedCtx *SharedContext) error {
 	var totalFiles int
 	err = sharedCtx.PM.WithSpinner("Calculating statistics", func() error {
 		agents = queryEngine.GetAllAgents()
-		
+
 		// Count all .md files to get true total
 		agentsDir := sharedCtx.GetAgentsDirectory()
 		filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {

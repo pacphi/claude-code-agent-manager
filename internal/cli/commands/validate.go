@@ -179,7 +179,7 @@ func (c *ValidateCommand) checkForWarnings(cfg *config.Config) {
 // validateInstalledAgents validates all installed agent files
 func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) error {
 	agentsDir := sharedCtx.GetAgentsDirectory()
-	
+
 	// Count all .md files first to get total
 	totalFiles := 0
 	err := filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
@@ -203,17 +203,17 @@ func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) erro
 	// Parse agents with warnings enabled to detect parsing errors
 	parserWithWarnings := parser.NewParserWithOptions(false) // Show warnings
 	parsedAgents, _ := parserWithWarnings.ParseDirectory(agentsDir)
-	
+
 	// Track statistics
 	validCount := 0
 	invalidCount := 0
 	parseFailureCount := totalFiles - len(parsedAgents) // Files that failed to parse
 	warningCount := 0
-	
+
 	// Validate successfully parsed agents
 	for _, agent := range parsedAgents {
 		isValid := true
-		
+
 		// Check for missing required fields
 		if agent.Name == "" {
 			PrintError("Agent at %s is missing name", agent.FilePath)
@@ -237,17 +237,17 @@ func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) erro
 			PrintWarning("Agent %s has no description", agent.Name)
 			warningCount++
 		}
-		
+
 		if isValid {
 			validCount++
 		} else {
 			invalidCount++
 		}
 	}
-	
+
 	// Add parse failures to invalid count
 	invalidCount += parseFailureCount
-	
+
 	// Display summary
 	fmt.Println()
 	color.Blue("Agent Validation Summary")
