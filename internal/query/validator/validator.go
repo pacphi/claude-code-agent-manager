@@ -16,8 +16,10 @@ type Validator struct {
 // NewValidator creates a new validator
 func NewValidator() *Validator {
 	return &Validator{
-		namePattern: regexp.MustCompile("^[a-z][a-z0-9-]*$"),
+		// Allow lowercase letters, numbers, hyphens, and dots (for versions like 4.8)
+		namePattern: regexp.MustCompile("^[a-z][a-z0-9.-]*$"),
 		validTools: map[string]bool{
+			// Core Claude Code tools
 			"Read":      true,
 			"Write":     true,
 			"Edit":      true,
@@ -28,7 +30,7 @@ func NewValidator() *Validator {
 			"Glob":      true,
 			"WebFetch":  true,
 			"WebSearch": true,
-			// Add other Claude Code tools as needed
+			// Note: Custom/domain-specific tools are now allowed
 		},
 	}
 }
@@ -48,12 +50,9 @@ func (v *Validator) Validate(spec *parser.AgentSpec) error {
 		return fmt.Errorf("description is required")
 	}
 
-	// Check optional field: tools
-	for _, tool := range spec.Tools {
-		if !v.validTools[tool] {
-			return fmt.Errorf("invalid tool: %s", tool)
-		}
-	}
+	// Tools are optional and custom tools are allowed
+	// We no longer validate against a fixed list since agents can declare
+	// domain-specific tools (e.g., "jira", "docker", "terraform", etc.)
 
 	// Check prompt exists
 	if spec.Prompt == "" {
@@ -106,15 +105,10 @@ func (v *Validator) ValidateWithReport(spec *parser.AgentSpec) *ValidationReport
 		report.Valid = false
 	}
 
-	// Tools (optional)
+	// Tools (optional) - custom tools are allowed
 	if len(spec.Tools) > 0 {
 		fieldsPresent++
-		for _, tool := range spec.Tools {
-			if !v.validTools[tool] {
-				report.Errors = append(report.Errors, fmt.Sprintf("Invalid tool: %s", tool))
-				report.Valid = false
-			}
-		}
+		// No validation needed - agents can declare any tools they need
 	}
 
 	// Prompt (required)

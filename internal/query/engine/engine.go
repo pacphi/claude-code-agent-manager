@@ -38,7 +38,7 @@ func NewEngine(indexPath, cachePath string) (*Engine, error) {
 	return &Engine{
 		index:  indexManager,
 		cache:  cacheManager,
-		parser: parser.NewParser(),
+		parser: parser.NewParserWithOptions(true), // Suppress warnings by default
 		fuzzy:  fuzzy.NewFuzzyMatcher(0.7),
 	}, nil
 }
@@ -187,7 +187,12 @@ func (e *Engine) RebuildIndex(dir string) error {
 	// Clear cache when rebuilding index
 	e.cache.Clear()
 
-	return e.index.Rebuild(dir)
+	if err := e.index.Rebuild(dir); err != nil {
+		return err
+	}
+
+	// Save the rebuilt index to disk
+	return e.index.Save()
 }
 
 // RebuildWithAgents rebuilds the index with a provided list of agents
@@ -206,9 +211,14 @@ func (e *Engine) UpdateIndex(dir string) error {
 		return fmt.Errorf("failed to parse agents: %w", err)
 	}
 
-	// Add/update agents in index
-	for _, agent := range agents {
-		e.index.AddAgent(agent)
+	// Rebuild index with all agents
+	if err := e.index.RebuildWithAgents(agents); err != nil {
+		return fmt.Errorf("failed to rebuild index: %w", err)
+	}
+
+	// Save the index to disk
+	if err := e.index.Save(); err != nil {
+		return fmt.Errorf("failed to save index: %w", err)
 	}
 
 	// Clear cache to ensure fresh results

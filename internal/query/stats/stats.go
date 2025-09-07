@@ -7,12 +7,24 @@ import (
 
 // Calculator computes agent statistics
 type Calculator struct {
-	agents []*parser.AgentSpec
+	agents     []*parser.AgentSpec
+	totalFiles int // Total number of .md files (including unparseable ones)
 }
 
 // NewCalculator creates a new stats calculator
 func NewCalculator(agents []*parser.AgentSpec) *Calculator {
-	return &Calculator{agents: agents}
+	return &Calculator{
+		agents:     agents,
+		totalFiles: len(agents), // Default: assume all files were parsed
+	}
+}
+
+// NewCalculatorWithTotal creates a new stats calculator with explicit total file count
+func NewCalculatorWithTotal(agents []*parser.AgentSpec, totalFiles int) *Calculator {
+	return &Calculator{
+		agents:     agents,
+		totalFiles: totalFiles,
+	}
 }
 
 // Statistics holds computed statistics
@@ -224,6 +236,7 @@ func (c *Calculator) GetValidationReport() map[string]interface{} {
 	errors := make(map[string]int)
 	warnings := make(map[string]int)
 
+	// Validate parsed agents
 	for _, agent := range c.agents {
 		if err := validator.Validate(agent); err != nil {
 			invalidCount++
@@ -239,15 +252,28 @@ func (c *Calculator) GetValidationReport() map[string]interface{} {
 		}
 	}
 
+	// Account for unparseable files
+	parseFailures := c.totalFiles - len(c.agents)
+	if parseFailures > 0 {
+		invalidCount += parseFailures
+		errors["Failed to parse (missing or invalid frontmatter)"] = parseFailures
+	}
+
+	// Use totalFiles for the actual total
+	actualTotal := c.totalFiles
+	if actualTotal == 0 {
+		actualTotal = len(c.agents) // Fallback if not set
+	}
+
 	return map[string]interface{}{
-		"total_agents":   len(c.agents),
+		"total_agents":   actualTotal,
 		"valid_agents":   validCount,
 		"invalid_agents": invalidCount,
 		"validation_rate": func() float64 {
-			if len(c.agents) == 0 {
+			if actualTotal == 0 {
 				return 0.0
 			}
-			return float64(validCount) / float64(len(c.agents)) * 100
+			return float64(validCount) / float64(actualTotal) * 100
 		}(),
 		"common_errors":   errors,
 		"common_warnings": warnings,

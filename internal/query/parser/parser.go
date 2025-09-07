@@ -76,11 +76,20 @@ func (a *AgentSpec) GetToolsAsSlice() []string {
 }
 
 // Parser extracts agent specifications
-type Parser struct{}
+type Parser struct {
+	SuppressWarnings bool
+}
 
 // NewParser creates a new parser
 func NewParser() *Parser {
 	return &Parser{}
+}
+
+// NewParserWithOptions creates a new parser with options
+func NewParserWithOptions(suppressWarnings bool) *Parser {
+	return &Parser{
+		SuppressWarnings: suppressWarnings,
+	}
 }
 
 // ParseFile extracts agent spec from a file
@@ -129,7 +138,9 @@ func (p *Parser) ParseDirectory(dir string) ([]*AgentSpec, error) {
 	walkErr := filepath.Walk(dir, func(path string, info os.FileInfo, walkFuncErr error) error {
 		if walkFuncErr != nil {
 			// Log error but continue processing other files
-			fmt.Fprintf(os.Stderr, "Warning: error accessing %s: %v\n", path, walkFuncErr)
+			if !p.SuppressWarnings {
+				fmt.Fprintf(os.Stderr, "Warning: error accessing %s: %v\n", path, walkFuncErr)
+			}
 			return nil
 		}
 
@@ -137,7 +148,9 @@ func (p *Parser) ParseDirectory(dir string) ([]*AgentSpec, error) {
 			agent, parseErr := p.ParseFile(path)
 			if parseErr != nil {
 				// Log error but continue parsing other files
-				fmt.Fprintf(os.Stderr, "Warning: error parsing %s: %v\n", path, parseErr)
+				if !p.SuppressWarnings {
+					fmt.Fprintf(os.Stderr, "Warning: error parsing %s: %v\n", path, parseErr)
+				}
 				return nil
 			}
 			agents = append(agents, agent)

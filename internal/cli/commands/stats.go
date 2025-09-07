@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -75,21 +77,34 @@ func (c *StatsCommand) Execute(sharedCtx *SharedContext) error {
 
 	// Get all agents for statistics
 	var agents []*parser.AgentSpec
+	var totalFiles int
 	err = sharedCtx.PM.WithSpinner("Calculating statistics", func() error {
 		agents = queryEngine.GetAllAgents()
+		
+		// Count all .md files to get true total
+		agentsDir := sharedCtx.GetAgentsDirectory()
+		filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			if strings.HasSuffix(path, ".md") && !info.IsDir() {
+				totalFiles++
+			}
+			return nil
+		})
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	if len(agents) == 0 {
+	if totalFiles == 0 && len(agents) == 0 {
 		PrintWarning("No agents found for statistics")
 		return nil
 	}
 
-	// Create stats calculator
-	calculator := stats.NewCalculator(agents)
+	// Create stats calculator with total file count
+	calculator := stats.NewCalculatorWithTotal(agents, totalFiles)
 
 	// Display appropriate statistics based on flags
 	if c.validation {
@@ -112,11 +127,17 @@ func (c *StatsCommand) displayBasicStats(calculator *stats.Calculator, sharedCtx
 	}
 
 	statistics := calculator.Calculate()
+	validationReport := calculator.GetValidationReport()
 
 	color.Blue("Agent Statistics\n")
 	fmt.Println(strings.Repeat("=", 40))
 
-	fmt.Printf("Total Agents: %d\n", statistics.TotalAgents)
+	// Show total from validation report which includes unparseable files
+	if totalAgents, ok := validationReport["total_agents"].(int); ok {
+		fmt.Printf("Total Agents: %d\n", totalAgents)
+	} else {
+		fmt.Printf("Total Agents: %d\n", statistics.TotalAgents)
+	}
 	fmt.Printf("Average Coverage: %.1f%%\n", statistics.Coverage.AverageCoverage)
 	fmt.Printf("Agents with Tools: %d\n", statistics.ToolUsage.ExplicitTools)
 	fmt.Printf("Agents with Inherited Tools: %d\n", statistics.ToolUsage.InheritedTools)

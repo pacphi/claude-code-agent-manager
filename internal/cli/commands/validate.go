@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
 	"github.com/pacphi/claude-code-agent-manager/internal/query/engine"
+	"github.com/pacphi/claude-code-agent-manager/internal/query/parser"
 	"github.com/spf13/cobra"
 )
 
@@ -44,6 +47,8 @@ Examples:
   agent-manager validate             # Validate configuration only
   agent-manager validate --agents    # Also validate installed agents
   agent-manager validate --query     # Test query functionality`,
+		SilenceUsage:  true,  // Don't show usage on error
+		SilenceErrors: true,  // Don't print errors (we handle them ourselves)
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.Execute(sharedCtx)
 		},
@@ -98,7 +103,7 @@ func (c *ValidateCommand) Execute(sharedCtx *SharedContext) error {
 	if c.agents {
 		fmt.Println()
 		if err := c.validateInstalledAgents(sharedCtx); err != nil {
-			PrintError("Agent validation failed: %v", err)
+			// Error already printed with details in validateInstalledAgents
 			return err
 		}
 		PrintSuccess("All installed agents are valid")
@@ -173,33 +178,52 @@ func (c *ValidateCommand) checkForWarnings(cfg *config.Config) {
 
 // validateInstalledAgents validates all installed agent files
 func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) error {
-	queryEngine, err := sharedCtx.CreateQueryEngine()
+	agentsDir := sharedCtx.GetAgentsDirectory()
+	
+	// Count all .md files first to get total
+	totalFiles := 0
+	err := filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Continue walking
+		}
+		if strings.HasSuffix(path, ".md") && !info.IsDir() {
+			totalFiles++
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to create query engine: %w", err)
+		return fmt.Errorf("failed to walk agents directory: %w", err)
 	}
 
-	agents := queryEngine.GetAllAgents()
-	if len(agents) == 0 {
-		PrintWarning("No agents installed to validate")
+	if totalFiles == 0 {
+		PrintWarning("No agent files found to validate")
 		return nil
 	}
 
+	// Parse agents with warnings enabled to detect parsing errors
+	parserWithWarnings := parser.NewParserWithOptions(false) // Show warnings
+	parsedAgents, _ := parserWithWarnings.ParseDirectory(agentsDir)
+	
+	// Track statistics
+	validCount := 0
 	invalidCount := 0
+	parseFailureCount := totalFiles - len(parsedAgents) // Files that failed to parse
 	warningCount := 0
-
-	for _, agent := range agents {
+	
+	// Validate successfully parsed agents
+	for _, agent := range parsedAgents {
+		isValid := true
+		
 		// Check for missing required fields
 		if agent.Name == "" {
 			PrintError("Agent at %s is missing name", agent.FilePath)
-			invalidCount++
-			continue
+			isValid = false
 		}
 
-		// Check if file exists
+		// Check if file exists (shouldn't happen for parsed agents, but double-check)
 		if _, err := os.Stat(agent.FilePath); os.IsNotExist(err) {
 			PrintError("Agent file does not exist: %s", agent.FilePath)
-			invalidCount++
-			continue
+			isValid = false
 		}
 
 		// Check if prompt is reasonable length
@@ -213,14 +237,36 @@ func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) erro
 			PrintWarning("Agent %s has no description", agent.Name)
 			warningCount++
 		}
+		
+		if isValid {
+			validCount++
+		} else {
+			invalidCount++
+		}
 	}
-
-	if sharedCtx.Options.Verbose && warningCount > 0 {
-		fmt.Printf("\nFound %d warnings in agent validation\n", warningCount)
+	
+	// Add parse failures to invalid count
+	invalidCount += parseFailureCount
+	
+	// Display summary
+	fmt.Println()
+	color.Blue("Agent Validation Summary")
+	fmt.Println(strings.Repeat("=", 40))
+	fmt.Printf("Total agent files: %d\n", totalFiles)
+	color.Green("✓ Valid agents: %d\n", validCount)
+	if invalidCount > 0 {
+		color.Red("✗ Invalid agents: %d\n", invalidCount)
+		if parseFailureCount > 0 {
+			color.Red("  - Failed to parse: %d\n", parseFailureCount)
+		}
+	}
+	if warningCount > 0 {
+		color.Yellow("⚠ Warnings: %d\n", warningCount)
 	}
 
 	if invalidCount > 0 {
-		return fmt.Errorf("found %d invalid agents", invalidCount)
+		// Exit with error code but don't return an error (to avoid duplicate message)
+		os.Exit(1)
 	}
 
 	return nil
