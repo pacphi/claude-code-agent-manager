@@ -56,39 +56,128 @@ func (c *ChromeController) Navigate(ctx context.Context, url string) error {
 	return nil
 }
 
-// waitForContent waits for dynamic content to load on marketplace pages
+// waitForContent waits for dynamic content to load on marketplace pages - HYBRID OPTIMIZED VERSION
 func (c *ChromeController) waitForContent(url string) chromedp.Action {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
 		// For marketplace category pages, wait for agents to load
 		if strings.Contains(url, "/categories/") && !strings.HasSuffix(url, "/categories") {
-			// Wait for either "Agents Found" text or skeleton content to be replaced
-			maxRetries := 25 // 25 seconds total for Next.js hydration
+			// HYBRID: Reasonable wait time
+			maxRetries := 5 // 5 seconds max for Next.js hydration
 			for i := 0; i < maxRetries; i++ {
 				var bodyText string
 				err := chromedp.Text("body", &bodyText, chromedp.ByQuery).Do(ctx)
 				if err == nil {
 					// Check if content has loaded (no "Searching..." and has "Agents Found")
 					if strings.Contains(bodyText, "Agents Found") && !strings.Contains(bodyText, "Searching...") {
-						// Additional wait to ensure React hydration is complete
+						// HYBRID: Moderate wait for React hydration - not too short, not too long
 						time.Sleep(3000 * time.Millisecond)
 
-						// Scroll down to load all agents (lazy loading)
-						_ = chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight)`, nil).Do(ctx)
+						// HYBRID: Strategic scrolling to trigger lazy loading without overdoing it
+						for initialScroll := 0; initialScroll < 3; initialScroll++ {
+							_ = chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight)`, nil).Do(ctx)
+							time.Sleep(800 * time.Millisecond)
 
-						// Wait for lazy-loaded content
-						time.Sleep(2000 * time.Millisecond)
+							// Scroll to middle and back to trigger intersection observers
+							_ = chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight / 2)`, nil).Do(ctx)
+							time.Sleep(500 * time.Millisecond)
+							_ = chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight)`, nil).Do(ctx)
+							time.Sleep(500 * time.Millisecond)
+						}
+
+						c.handleLoadMorePagination(ctx)
 
 						return nil // Content loaded
 					}
 				}
-				time.Sleep(1000 * time.Millisecond) // Wait 1 second before retry
+				time.Sleep(250 * time.Millisecond) // Wait 250ms before retry
 			}
 		} else {
 			// For other pages, use standard wait
-			time.Sleep(3000 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 		}
 		return nil
 	})
+}
+
+func (c *ChromeController) handleLoadMorePagination(ctx context.Context) {
+	maxClicks := 10 // Reasonable limit - most categories have 1-2 pages
+
+	// Get expected count to know when we're done
+	var expectedCount int
+	_ = chromedp.Evaluate(`
+		(function() {
+			const pageText = document.body.textContent;
+			const countMatch = pageText.match(/(\d+)\s+Agents?\s+Found/i);
+			console.log('Expected count search in:', pageText.substring(0, 200));
+			return countMatch ? parseInt(countMatch[1]) : 0;
+		})()
+	`, &expectedCount).Do(ctx)
+
+	for i := 0; i < maxClicks; i++ {
+		// Quick check for Load More button
+		var hasLoadMore bool
+		err := chromedp.Evaluate(`
+			(function() {
+				const buttons = Array.from(document.querySelectorAll('button'));
+				const loadMore = buttons.find(btn => {
+					const text = btn.textContent?.trim().toLowerCase();
+					return text === 'load more' || text.includes('load more');
+				});
+				return loadMore && !loadMore.disabled && loadMore.style.display !== 'none';
+			})()
+		`, &hasLoadMore).Do(ctx)
+
+		if err != nil || !hasLoadMore {
+			// No Load More button, we're done
+			break
+		}
+
+		// Click Load More button quickly
+		err = chromedp.Click(`//button[contains(translate(., 'LOAD MORE', 'load more'), 'load more')]`, chromedp.BySearch).Do(ctx)
+		if err != nil {
+			// Try JavaScript click as fallback
+			var clicked bool
+			_ = chromedp.Evaluate(`
+				(function() {
+					const buttons = Array.from(document.querySelectorAll('button'));
+					const loadMore = buttons.find(btn => {
+						const text = btn.textContent?.trim().toLowerCase();
+						return text === 'load more' || text.includes('load more');
+					});
+					if (loadMore && !loadMore.disabled) {
+						loadMore.click();
+						return true;
+					}
+					return false;
+				})()
+			`, &clicked).Do(ctx)
+
+			if !clicked {
+				break // Can't click, we're done
+			}
+		}
+
+		// OPTIMIZED: Wait for new content - but not too long
+		time.Sleep(2000 * time.Millisecond)
+
+		// OPTIMIZED: Single scroll to trigger any new Load More buttons
+		_ = chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight)`, nil).Do(ctx)
+		time.Sleep(50 * time.Millisecond)
+
+		// Check if we've reached expected count, but don't trust the expected count completely
+		if expectedCount > 0 {
+			var newCount int
+			_ = chromedp.Evaluate(`Array.from(document.querySelectorAll('button')).filter(b => b.textContent?.trim().toLowerCase() === 'view').length`, &newCount).Do(ctx)
+			// Only exit if we have significantly more agents than expected
+			if newCount >= expectedCount + 5 {
+				break
+			}
+		}
+	}
+
+	// OPTIMIZED: Final single scroll to ensure everything is visible
+	_ = chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight)`, nil).Do(ctx)
+	time.Sleep(250 * time.Millisecond)
 }
 
 // ExecuteScript executes JavaScript and returns the result
