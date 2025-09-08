@@ -47,8 +47,8 @@ Examples:
   agent-manager validate             # Validate configuration only
   agent-manager validate --agents    # Also validate installed agents
   agent-manager validate --query     # Test query functionality`,
-		SilenceUsage:  true,  // Don't show usage on error
-		SilenceErrors: true,  // Don't print errors (we handle them ourselves)
+		SilenceUsage:  true, // Don't show usage on error
+		SilenceErrors: true, // Don't print errors (we handle them ourselves)
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.Execute(sharedCtx)
 		},
@@ -184,7 +184,7 @@ func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) erro
 	totalFiles := 0
 	err := filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Continue walking
+			return err // Propagate the error
 		}
 		if strings.HasSuffix(path, ".md") && !info.IsDir() {
 			totalFiles++
@@ -265,8 +265,7 @@ func (c *ValidateCommand) validateInstalledAgents(sharedCtx *SharedContext) erro
 	}
 
 	if invalidCount > 0 {
-		// Exit with error code but don't return an error (to avoid duplicate message)
-		os.Exit(1)
+		return fmt.Errorf("found %d invalid agents", invalidCount)
 	}
 
 	return nil

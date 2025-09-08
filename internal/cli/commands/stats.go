@@ -83,15 +83,18 @@ func (c *StatsCommand) Execute(sharedCtx *SharedContext) error {
 
 		// Count all .md files to get true total
 		agentsDir := sharedCtx.GetAgentsDirectory()
-		filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(agentsDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				return nil
+				return err // Propagate the error
 			}
 			if strings.HasSuffix(path, ".md") && !info.IsDir() {
 				totalFiles++
 			}
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {

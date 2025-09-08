@@ -161,27 +161,6 @@ func TestValidate_MissingPrompt(t *testing.T) {
 	}
 }
 
-// TestValidate_InvalidTools tests validation failure for invalid tool names
-func TestValidate_InvalidTools(t *testing.T) {
-	validator := NewValidator()
-
-	spec := &parser.AgentSpec{
-		Name:        "test-agent",
-		Description: "Test description",
-		Tools:       []string{"Read", "InvalidTool", "Write"}, // Contains invalid tool
-		Prompt:      "Prompt content.",
-	}
-
-	err := validator.Validate(spec)
-	if err == nil {
-		t.Error("Expected validation to fail for invalid tool")
-	}
-
-	if !strings.Contains(err.Error(), "invalid tool: InvalidTool") {
-		t.Errorf("Expected error message about invalid tool, got: %v", err)
-	}
-}
-
 // TestValidate_ValidTools tests validation success for all valid tools
 func TestValidate_ValidTools(t *testing.T) {
 	validator := NewValidator()
@@ -263,10 +242,10 @@ func TestValidateWithReport_InvalidAgent(t *testing.T) {
 	validator := NewValidator()
 
 	spec := &parser.AgentSpec{
-		Name:        "Invalid_Name",          // Invalid format
-		Description: "",                      // Missing description
-		Tools:       []string{"InvalidTool"}, // Invalid tool
-		Prompt:      "",                      // Missing prompt
+		Name:        "Invalid_Name",         // Invalid format
+		Description: "",                     // Missing description
+		Tools:       []string{"CustomTool"}, // Custom tools are now allowed
+		Prompt:      "",                     // Missing prompt
 	}
 
 	report := validator.ValidateWithReport(spec)
@@ -275,7 +254,7 @@ func TestValidateWithReport_InvalidAgent(t *testing.T) {
 		t.Error("Expected report to indicate invalid agent")
 	}
 
-	expectedErrors := 4 // Invalid name format, missing description, invalid tool, missing prompt
+	expectedErrors := 3 // Invalid name format, missing description, missing prompt (custom tools are now allowed)
 	if len(report.Errors) != expectedErrors {
 		t.Errorf("Expected %d errors, got %d: %v", expectedErrors, len(report.Errors), report.Errors)
 	}
@@ -397,7 +376,7 @@ func TestValidateWithReport_MultipleErrors(t *testing.T) {
 		t.Error("Expected report to indicate invalid agent")
 	}
 
-	expectedMinErrors := 5
+	expectedMinErrors := 3
 	if len(report.Errors) < expectedMinErrors {
 		t.Errorf("Expected at least %d errors, got %d: %v", expectedMinErrors, len(report.Errors), report.Errors)
 	}
@@ -408,8 +387,6 @@ func TestValidateWithReport_MultipleErrors(t *testing.T) {
 	requiredErrors := []string{
 		"Missing name",
 		"Missing description",
-		"Invalid tool: BadTool",
-		"Invalid tool: AnotherBadTool",
 		"Missing prompt",
 	}
 

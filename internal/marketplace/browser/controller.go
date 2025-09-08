@@ -169,7 +169,7 @@ func (c *ChromeController) handleLoadMorePagination(ctx context.Context) {
 			var newCount int
 			_ = chromedp.Evaluate(`Array.from(document.querySelectorAll('button')).filter(b => b.textContent?.trim().toLowerCase() === 'view').length`, &newCount).Do(ctx)
 			// Only exit if we have significantly more agents than expected
-			if newCount >= expectedCount + 5 {
+			if newCount >= expectedCount+5 {
 				break
 			}
 		}
