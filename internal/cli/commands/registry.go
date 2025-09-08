@@ -83,13 +83,3 @@ func (r *CommandRegistry) setupGlobalOptions() {
 	// Setup progress manager
 	SetupProgress(r.sharedOpts)
 }
-
-// GetSharedContext returns the shared context for testing
-func (r *CommandRegistry) GetSharedContext() *SharedContext {
-	return r.sharedCtx
-}
-
-// GetSharedOptions returns the shared options for testing
-func (r *CommandRegistry) GetSharedOptions() *SharedOptions {
-	return r.sharedOpts
-}

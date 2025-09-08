@@ -310,61 +310,6 @@ func validateMetadata(metadata *Metadata) error {
 	return nil
 }
 
-// ValidateAccess checks if the required tools and permissions are available
-func ValidateAccess(cfg *Config) error {
-	var errors []string
-
-	// Check for required tools based on source types
-	for _, source := range cfg.Sources {
-		if !source.Enabled {
-			continue
-		}
-
-		switch source.Type {
-		case "github":
-			// Check for gh CLI
-			if !commandExists("gh") {
-				// Fall back to git
-				if !commandExists("git") {
-					errors = append(errors, fmt.Sprintf("source '%s': neither 'gh' CLI nor 'git' is available", source.Name))
-				}
-			}
-
-		case "git":
-			if !commandExists("git") {
-				errors = append(errors, fmt.Sprintf("source '%s': 'git' is not available", source.Name))
-			}
-
-		case "local":
-			// Check if source path exists
-			sourcePath := expandPath(source.Paths.Source)
-			if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-				errors = append(errors, fmt.Sprintf("source '%s': path does not exist: %s", source.Name, sourcePath))
-			}
-		}
-
-		// Check authentication requirements
-		if source.Auth.Method == "token" {
-			if os.Getenv(source.Auth.TokenEnv) == "" {
-				errors = append(errors, fmt.Sprintf("source '%s': environment variable %s is not set", source.Name, source.Auth.TokenEnv))
-			}
-		}
-
-		if source.Auth.Method == "ssh" {
-			sshKeyPath := expandPath(source.Auth.SSHKey)
-			if _, err := os.Stat(sshKeyPath); os.IsNotExist(err) {
-				errors = append(errors, fmt.Sprintf("source '%s': SSH key not found: %s", source.Name, sshKeyPath))
-			}
-		}
-	}
-
-	if len(errors) > 0 {
-		return fmt.Errorf("access validation failed:\n  - %s", strings.Join(errors, "\n  - "))
-	}
-
-	return nil
-}
-
 // Helper functions
 
 func contains(slice []string, item string) bool {

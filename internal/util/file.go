@@ -126,23 +126,6 @@ func (fm *FileManager) copyWithOptimalBuffer(dst io.Writer, src io.Reader) (int6
 	return io.CopyBuffer(dst, src, buffer)
 }
 
-// Move safely moves a file from src to dst
-func (fm *FileManager) Move(src, dst string) error {
-	// First copy the file
-	if err := fm.Copy(src, dst); err != nil {
-		return err
-	}
-
-	// Then remove the source
-	if err := fm.Remove(src); err != nil {
-		// If remove fails, try to cleanup the destination
-		_ = fm.Remove(dst)
-		return fmt.Errorf("failed to remove source after copy: %w", err)
-	}
-
-	return nil
-}
-
 // Remove safely removes a file or directory
 func (fm *FileManager) Remove(path string) error {
 	if err := ValidatePath(path); err != nil {
@@ -173,35 +156,6 @@ func (fm *FileManager) Remove(path string) error {
 	}
 
 	return os.RemoveAll(path)
-}
-
-// Exists checks if a path exists
-func (fm *FileManager) Exists(path string) (bool, error) {
-	if err := ValidatePath(path); err != nil {
-		return false, fmt.Errorf("invalid path: %w", err)
-	}
-
-	_, err := os.Stat(filepath.Clean(path))
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// IsDir checks if a path is a directory
-func (fm *FileManager) IsDir(path string) (bool, error) {
-	if err := ValidatePath(path); err != nil {
-		return false, fmt.Errorf("invalid path: %w", err)
-	}
-
-	info, err := os.Stat(filepath.Clean(path))
-	if err != nil {
-		return false, err
-	}
-	return info.IsDir(), nil
 }
 
 // SecureJoin safely joins path components and validates the result

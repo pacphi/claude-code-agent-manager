@@ -328,17 +328,3 @@ func applyQueryDefaults(query *QueryConfig, baseDir string) {
 		query.Defaults.Fuzzy = true
 	}
 }
-
-// Save writes the configuration to a file
-func Save(cfg *Config, path string) error {
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0600); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
-}

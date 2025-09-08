@@ -29,14 +29,3 @@ type Options struct {
 	WindowWidth  int
 	WindowHeight int
 }
-
-// DefaultOptions returns sensible default options
-func DefaultOptions() Options {
-	return Options{
-		Headless:     true,
-		Timeout:      30,
-		UserAgent:    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-		WindowWidth:  1920,
-		WindowHeight: 1080,
-	}
-}

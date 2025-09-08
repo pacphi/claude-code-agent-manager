@@ -5,30 +5,6 @@ import (
 	"strings"
 )
 
-// ResolveURL resolves a relative URL against a base URL
-func ResolveURL(base, relative string) string {
-	if relative == "" {
-		return ""
-	}
-
-	// If relative is already absolute, return it
-	if strings.HasPrefix(relative, "http://") || strings.HasPrefix(relative, "https://") {
-		return relative
-	}
-
-	baseURL, err := url.Parse(base)
-	if err != nil {
-		return relative
-	}
-
-	relURL, err := url.Parse(relative)
-	if err != nil {
-		return relative
-	}
-
-	return baseURL.ResolveReference(relURL).String()
-}
-
 // ExtractSlugFromURL extracts a slug from a URL path
 func ExtractSlugFromURL(urlStr string) string {
 	if urlStr == "" {

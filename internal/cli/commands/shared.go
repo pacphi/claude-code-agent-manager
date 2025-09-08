@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/pacphi/claude-code-agent-manager/internal/config"
@@ -184,11 +182,6 @@ func SetupProgress(opts *SharedOptions) {
 		DryRun:  opts.DryRun,
 		NoColor: opts.NoColor,
 	})
-}
-
-// WithTimeout creates a context with timeout for operations
-func WithTimeout(duration time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), duration)
 }
 
 // PrintSuccess prints a success message with consistent formatting

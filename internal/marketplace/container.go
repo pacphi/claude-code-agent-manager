@@ -110,11 +110,6 @@ func (c *Container) Close() error {
 	return nil
 }
 
-// WithConfig creates a new container with custom configuration
-func WithConfig(config ContainerConfig) (*Container, error) {
-	return NewContainer(config)
-}
-
 // WithDefaults creates a new container with default configuration
 func WithDefaults() (*Container, error) {
 	return NewContainer(DefaultContainerConfig())

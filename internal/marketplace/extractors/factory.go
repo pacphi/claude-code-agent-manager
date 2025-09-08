@@ -25,18 +25,3 @@ func (f *Factory) CreateExtractorSet() service.ExtractorSet {
 		Content:    NewContentExtractor(f.scriptLoader),
 	}
 }
-
-// CreateCategoryExtractor creates a category extractor
-func (f *Factory) CreateCategoryExtractor() CategoryExtractor {
-	return NewCategoryExtractor(f.scriptLoader)
-}
-
-// CreateAgentExtractor creates an agent extractor
-func (f *Factory) CreateAgentExtractor() AgentExtractor {
-	return NewAgentExtractor(f.scriptLoader)
-}
-
-// CreateContentExtractor creates a content extractor
-func (f *Factory) CreateContentExtractor() ContentExtractor {
-	return NewContentExtractor(f.scriptLoader)
-}

@@ -43,12 +43,3 @@ type Config struct {
 	TTL       time.Duration
 	MaxSizeMB int64
 }
-
-// DefaultConfig returns sensible default cache configuration
-func DefaultConfig() Config {
-	return Config{
-		Enabled:   true,
-		TTL:       1 * time.Hour,
-		MaxSizeMB: 50,
-	}
-}

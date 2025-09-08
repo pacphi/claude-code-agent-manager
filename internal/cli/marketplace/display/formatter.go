@@ -82,17 +82,6 @@ func (f *Formatter) PrintAgents(agents []marketplace.Agent) {
 	}
 }
 
-// PrintSearchResults displays search results with highlighted query
-func (f *Formatter) PrintSearchResults(agents []marketplace.Agent, query string) {
-	if len(agents) == 0 {
-		f.PrintWarning(fmt.Sprintf("No agents found matching '%s'", query))
-		return
-	}
-
-	f.PrintHeader(fmt.Sprintf("Found %d agents matching '%s':", len(agents), color.YellowString(query)))
-	f.PrintAgents(agents)
-}
-
 // PrintAgentDetails displays detailed information about a single agent
 func (f *Formatter) PrintAgentDetails(agent marketplace.Agent, content string) {
 	fmt.Printf("\n%s\n", color.HiCyanString("Agent Details"))
@@ -143,11 +132,6 @@ func (f *Formatter) PrintAgentDetails(agent marketplace.Agent, content string) {
 // PrintSuccess displays a success message
 func (f *Formatter) PrintSuccess(message string) {
 	fmt.Printf("%s %s\n", color.GreenString("✓"), message)
-}
-
-// PrintError displays an error message
-func (f *Formatter) PrintError(message string) {
-	fmt.Printf("%s %s\n", color.RedString("✗"), message)
 }
 
 // PrintWarning displays a warning message
