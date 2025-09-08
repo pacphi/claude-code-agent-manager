@@ -196,12 +196,12 @@ agent-manager query [QUERY] [options]
 
 ```bash
 # Basic field searches
-agent-manager query "name:go"
-agent-manager query "tools:bash,git"
-agent-manager query "description:automation"
+agent-manager query --field name "go"
+agent-manager query --field tools "Read,git"
+agent-manager query --field description "automation"
 
 # Regex pattern matching
-agent-manager query "name:^data.*processor$" --regex
+agent-manager query "name:^git.*manager$" --regex
 
 # Multi-field fuzzy search
 agent-manager query "database management" --fuzzy-score 0.6

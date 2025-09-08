@@ -140,19 +140,16 @@ Search within specific agent fields using field:value syntax:
 
 ```bash
 # Search by agent name
-agent-manager query "name:reviewer"
+agent-manager query --field name "reviewer"
 
 # Search in descriptions
-agent-manager query "description:typescript"
+agent-manager query --field description "typescript"
 
 # Search within agent prompts
-agent-manager query "content:javascript"
+agent-manager query --field content "javascript"
 
 # Find agents using specific tools
-agent-manager query "tools:Read,Write"
-
-# Or use the --field flag
-agent-manager query --field name "reviewer"
+agent-manager query --field tools "Read,Write"
 ```
 
 ### Advanced Search Options
