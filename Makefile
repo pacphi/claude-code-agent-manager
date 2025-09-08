@@ -1,4 +1,4 @@
-.PHONY: build test install clean run help cross-compile benchmark benchmark-quick benchmark-profile benchmark-clean deps-upgrade
+.PHONY: build test install clean run help cross-compile benchmark benchmark-quick benchmark-profile benchmark-clean deps-upgrade deadcode ci
 
 # Variables
 BINARY_NAME := agent-manager
@@ -13,7 +13,10 @@ all: build
 ## help: Display this help message
 help:
 	@echo "Available targets:"
-	@awk 'BEGIN {FS = ":.*##"; printf "\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  %-20s %s\n", $$1, $$2 } /^##@/ { printf "\n%s\n", substr($$0, 5) }' $(MAKEFILE_LIST)
+	@grep -E '^## [a-zA-Z_-]+:' $(MAKEFILE_LIST) | \
+		sed 's/^## \([^:]*\): \(.*\)/  \1|\2/' | \
+		column -t -s '|' | \
+		sed 's/^/  /'
 
 ## build: Build the agent-manager binary
 build:
@@ -96,6 +99,23 @@ lint:
 vet:
 	@echo "Running go vet..."
 	@go vet ./...
+
+## deadcode: Run deadcode analysis with test flag
+deadcode:
+	@echo "Running deadcode analysis..."
+	@if command -v deadcode &> /dev/null; then \
+		deadcode -test ./...; \
+	else \
+		echo ""; \
+		echo "deadcode is not installed."; \
+		echo "Install with: go install golang.org/x/tools/cmd/deadcode@latest"; \
+		echo ""; \
+		exit 1; \
+	fi
+
+## ci: Run all CI checks (format, vet, lint, deadcode, test)
+ci: fmt vet lint deadcode test
+	@echo "All CI checks completed successfully"
 
 ## cross-compile: Build binaries for multiple platforms
 cross-compile:
