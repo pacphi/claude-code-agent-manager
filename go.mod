@@ -16,7 +16,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/epiclabs-io/diff3 v0.0.0-20241115194849-280ec18688b6
 	github.com/schollz/progressbar/v3 v3.18.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
