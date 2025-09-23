@@ -1,5 +1,9 @@
 # Claude Code Agent Manager
 
+[![Version](https://img.shields.io/github/v/release/pacphi/claude-code-agent-manager?include_prereleases)](https://github.com/pacphi/claude-code-agent-manager/releases)
+[![License](https://img.shields.io/github/license/pacphi/claude-code-agent-manager)](LICENSE)
+[![CI](https://github.com/pacphi/claude-code-agent-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/pacphi/claude-code-agent-manager/actions/workflows/ci.yml)
+
 A powerful YAML-driven system for managing Claude Code [subagents](https://docs.anthropic.com/en/docs/claude-code/sub-agents) from multiple sources.
 
 ## Quick Start
