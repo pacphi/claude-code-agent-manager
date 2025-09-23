@@ -29,11 +29,6 @@ LICENSE
 *~
 .DS_Store
 
-# Docker files
-Dockerfile
-.dockerignore
-docker-compose*.yml
-
 # CI/CD
 .github/
 .gitlab-ci.yml

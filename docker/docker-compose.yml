@@ -3,8 +3,8 @@ version: '3.8'
 services:
   agent-manager:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
       args:
         - VERSION=${VERSION:-dev}
     image: agent-manager:${VERSION:-latest}
@@ -28,7 +28,7 @@ services:
     # Volumes for configuration and output
     volumes:
       # Mount config as read-only
-      - ./agents-config.yaml:/app/agents-config.yaml:ro
+      - ../agents-config.yaml:/app/agents-config.yaml:ro
       # Mount for agent installation (read-write needed)
       - agent-data:/app/.claude/agents
       # Mount for installation tracking

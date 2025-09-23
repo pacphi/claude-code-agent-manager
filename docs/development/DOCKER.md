@@ -14,10 +14,10 @@ Deploy and run Agent Manager in Docker containers for isolated, reproducible env
 make docker-build
 
 # Or using Docker directly
-docker build -t agent-manager:latest .
+docker build -f docker/Dockerfile -t agent-manager:latest .
 
 # Build with specific version tag
-docker build -t agent-manager:v1.0.0 --build-arg VERSION=v1.0.0 .
+docker build -f docker/Dockerfile -t agent-manager:v1.0.0 --build-arg VERSION=v1.0.0 .
 ```
 
 ## Basic Usage
@@ -72,29 +72,29 @@ docker run --rm \
 
 ```bash
 # Build the image
-docker-compose build
+docker-compose -f docker/docker-compose.yml build
 
 # Run install command
-docker-compose run agent-manager install
+docker-compose -f docker/docker-compose.yml run agent-manager install
 
 # Run with specific source
-docker-compose run agent-manager install --source awesome-claude-code-subagents
+docker-compose -f docker/docker-compose.yml run agent-manager install --source awesome-claude-code-subagents
 
 # List installed agents
-docker-compose run agent-manager list
+docker-compose -f docker/docker-compose.yml run agent-manager list
 
 # Update agents
-docker-compose run agent-manager update
+docker-compose -f docker/docker-compose.yml run agent-manager update
 ```
 
 ### Custom Configuration
 
 ```bash
 # Set version and log level
-VERSION=v1.0.0 LOG_LEVEL=debug docker-compose run agent-manager install
+VERSION=v1.0.0 LOG_LEVEL=debug docker-compose -f docker/docker-compose.yml run agent-manager install
 
 # Use different config file
-docker-compose run \
+docker-compose -f docker/docker-compose.yml run \
   -v $(pwd)/custom-config.yaml:/app/agents-config.yaml:ro \
   agent-manager install
 ```
@@ -143,7 +143,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Build Docker image
-        run: docker build -t agent-manager:${{ github.sha }} .
+        run: docker build -f docker/Dockerfile -t agent-manager:${{ github.sha }} .
 
       - name: Install agents
         run: |
@@ -161,7 +161,7 @@ install-agents:
   services:
     - docker:dind
   script:
-    - docker build -t agent-manager:$CI_COMMIT_SHA .
+    - docker build -f docker/Dockerfile -t agent-manager:$CI_COMMIT_SHA .
     - docker run --rm
         -v $CI_PROJECT_DIR/agents-config.yaml:/app/agents-config.yaml:ro
         -v agents:/app/.claude/agents
@@ -205,7 +205,7 @@ Build debug image with shell:
 
 ```bash
 # Build debug image
-docker build --target builder -t agent-manager:debug .
+docker build -f docker/Dockerfile --target builder -t agent-manager:debug .
 docker run --rm -it agent-manager:debug /bin/sh
 ```
 
@@ -217,6 +217,6 @@ docker run --rm -it agent-manager:debug /bin/sh
 
 ## See Also
 
-- [Docker Compose file](../../docker-compose.yml)
-- [Dockerfile](../../Dockerfile)
+- [Docker Compose file](../../docker/docker-compose.yml)
+- [Dockerfile](../../docker/Dockerfile)
 - [Configuration Guide](../guides/CONFIGURATION.md)

@@ -184,7 +184,7 @@ dev:
 ## docker-build: Build Docker image
 docker-build:
 	@echo "Building Docker image..."
-	@docker build -t $(BINARY_NAME):$(VERSION) .
+	@docker build -f docker/Dockerfile -t $(BINARY_NAME):$(VERSION) .
 	@docker tag $(BINARY_NAME):$(VERSION) $(BINARY_NAME):latest
 	@echo "Docker image built: $(BINARY_NAME):$(VERSION)"
 
