@@ -172,6 +172,7 @@ backups/
 .claude
 examples/
 project-documentation
+docs/voltagent/
 
 # NOTE: go.sum is intentionally NOT ignored
 # go.sum should be committed for reproducible builds
