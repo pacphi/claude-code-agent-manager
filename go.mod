@@ -11,7 +11,7 @@ require (
 )
 
 require (
-	github.com/chromedp/chromedp v0.14.1
+	github.com/chromedp/chromedp v0.14.2
 	github.com/cyphar/filepath-securejoin v0.5.0
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/epiclabs-io/diff3 v0.0.0-20241115194849-280ec18688b6
