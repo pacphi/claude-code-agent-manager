@@ -96,7 +96,7 @@ jobs:
       run: ./bin/agent-manager --version || ./bin/agent-manager --help
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: agent-manager-${{ github.sha }}
         path: bin/agent-manager
