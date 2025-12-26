@@ -36,6 +36,7 @@ jobs:
       with:
         go-version-input: 1.24.6
         go-package: ./...
+        repo-checkout: false
 
     - name: Run Nancy vulnerability scanner for Go modules
       run: |
