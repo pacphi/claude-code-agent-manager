@@ -7,7 +7,7 @@ This document provides a comprehensive guide to all prerequisites needed to buil
 Before proceeding, ensure you have these core requirements:
 
 ```bash
-# Check Go version (requires 1.24.6+)
+# Check Go version (requires 1.24.11+)
 go version
 
 # Check Git availability
@@ -24,7 +24,7 @@ which google-chrome || which chromium || which chromium-browser || echo "No brow
 
 ### 1. Go Programming Language
 
-**Required Version**: Go 1.24.6 or later
+**Required Version**: Go 1.24.11 or later
 
 **Installation**:
 
@@ -37,7 +37,7 @@ which google-chrome || which chromium || which chromium-browser || echo "No brow
 
 ```bash
 go version
-# Should show: go version go1.24.6 or later
+# Should show: go version go1.24.11 or later
 ```
 
 ### 2. Git Version Control
@@ -207,8 +207,8 @@ echo "1. Checking Go..."
 if command -v go &> /dev/null; then
     GO_VERSION=$(go version | cut -d' ' -f3 | sed 's/go//')
     echo "   ✓ Go found: $GO_VERSION"
-    if [[ "$GO_VERSION" < "1.24.6" ]]; then
-        echo "   ⚠ Warning: Go 1.24.6+ required, found $GO_VERSION"
+    if [[ "$GO_VERSION" < "1.24.11" ]]; then
+        echo "   ⚠ Warning: Go 1.24.11+ required, found $GO_VERSION"
     fi
 else
     echo "   ✗ Go not found - REQUIRED"
@@ -282,7 +282,7 @@ echo "✓ = Available, ✗ = Missing (required), ⚠ = Warning, - = Optional"
 
 **Version too old**:
 
-- Update Go to 1.24.6+ from [golang.org](https://golang.org/dl/)
+- Update Go to 1.24.11+ from [golang.org](https://golang.org/dl/)
 
 ### Browser Issues
 

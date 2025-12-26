@@ -52,7 +52,7 @@ The project uses a tag-based release workflow (`.github/workflows/release.yml`):
 ### Workflow Steps
 
 1. **Checkout**: Fetch source code with full history
-2. **Setup**: Configure Go 1.24.6 with module caching
+2. **Setup**: Configure Go 1.24.11 with module caching
 3. **Test**: Run full test suite
 4. **Build**: Cross-compile for all platforms using `make cross-compile`
 5. **Checksum**: Generate SHA256SUMS for all binaries
@@ -76,7 +76,7 @@ Ensure you have the required tools:
 
 ```bash
 # Required
-go version          # Go 1.24.6+
+go version          # Go 1.24.11+
 git --version       # Git for tagging
 gh --version        # GitHub CLI for monitoring
 

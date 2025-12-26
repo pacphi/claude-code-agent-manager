@@ -10,7 +10,7 @@ This guide covers how to build, install, and develop Agent Manager.
 
 Ensure you have these core requirements:
 
-- **Go 1.24.6+** - Download from [golang.org](https://golang.org/dl/)
+- **Go 1.24.11+** - Download from [golang.org](https://golang.org/dl/)
 - **Git** - For version control operations
 - **Make** - For convenient build commands (recommended)
 - **Chrome/Chromium/Brave** - For marketplace features (optional)
@@ -19,7 +19,7 @@ Ensure you have these core requirements:
 
 ```bash
 # Quick verification
-go version    # Should show 1.24.6+
+go version    # Should show 1.24.11+
 git --version
 make --version
 ```

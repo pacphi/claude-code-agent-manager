@@ -8,7 +8,7 @@ Welcome! We're excited that you want to contribute to Agent Manager. This guide 
 
 Before contributing, ensure you have:
 
-- **Go 1.24.6+** installed
+- **Go 1.24.11+** installed
 - **Git** for version control
 - **Make** for build commands
 - **GitHub CLI** (optional but recommended)

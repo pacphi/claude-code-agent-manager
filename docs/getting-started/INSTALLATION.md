@@ -7,7 +7,7 @@ A step-by-step guide to installing and setting up Agent Manager.
 Before installation, verify you have the required tools:
 
 ```bash
-# Check Go version (requires 1.24.6+)
+# Check Go version (requires 1.24.11+)
 go version
 
 # Check Git installation

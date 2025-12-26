@@ -102,7 +102,7 @@ The configuration supports variable substitution:
 
 ### Required
 
-- **Go 1.24.6+** - For building and running Agent Manager
+- **Go 1.24.11+** - For building and running Agent Manager
 - **Git** - For version control and repository operations
 - **Make** - For build commands (recommended, but optional)
 
