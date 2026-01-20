@@ -15,7 +15,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.6.1
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/epiclabs-io/diff3 v0.0.0-20241115194849-280ec18688b6
-	github.com/schollz/progressbar/v3 v3.18.0
+	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/stretchr/testify v1.11.1
 )
 
