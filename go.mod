@@ -4,7 +4,7 @@ go 1.24.11
 
 require (
 	github.com/fatih/color v1.18.0
-	github.com/go-git/go-git/v5 v5.16.4
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/text v0.32.0
 	gopkg.in/yaml.v3 v3.0.1
