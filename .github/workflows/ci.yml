@@ -67,7 +67,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         files: ./coverage.out
         flags: unittests
