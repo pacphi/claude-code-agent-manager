@@ -279,7 +279,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.24'
+          go-version: '1.26'
 
       - name: Build Agent Manager
         run: make build
@@ -304,7 +304,7 @@ jobs:
 
 ```yaml
 update-agents:
-  image: golang:1.24
+  image: golang:1.26
   script:
     - make build
     - ./bin/agent-manager update

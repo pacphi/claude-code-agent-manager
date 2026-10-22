@@ -3,6 +3,7 @@ package tracker
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -266,17 +267,26 @@ func (t *Tracker) Backup() error {
 		return nil // Nothing to backup
 	}
 
-	// Read current data
-	content, err := os.ReadFile(t.filePath)
+	// Open current data
+	src, err := os.Open(t.filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read tracking data: %w", err)
 	}
+	defer func() { _ = src.Close() }()
 
 	// Create backup filename with timestamp
 	backupPath := fmt.Sprintf("%s.backup.%s", t.filePath, time.Now().Format("20060102-150405"))
 
-	// Write backup
-	if err := os.WriteFile(backupPath, content, 0600); err != nil {
+	// Stream the tracking file into the backup
+	dst, err := os.OpenFile(backupPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to create backup: %w", err)
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		_ = dst.Close()
+		return fmt.Errorf("failed to create backup: %w", err)
+	}
+	if err := dst.Close(); err != nil {
 		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
@@ -305,8 +315,8 @@ func (t *Tracker) Restore(backupPath string) error {
 		return fmt.Errorf("invalid backup file: %w", err)
 	}
 
-	// Write to tracking file
-	if err := os.WriteFile(t.filePath, content, 0600); err != nil {
+	// Write the validated data through the atomic save path
+	if err := t.save(&data); err != nil {
 		return fmt.Errorf("failed to restore backup: %w", err)
 	}
 

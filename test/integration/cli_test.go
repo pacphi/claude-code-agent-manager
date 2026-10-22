@@ -312,7 +312,8 @@ func runCLICommand(t *testing.T, binaryPath, testDir string, args ...string) (st
 	configPath := filepath.Join(testDir, "agents-config.yaml")
 
 	// Add config flag to all commands
-	fullArgs := []string{"--config", configPath}
+	fullArgs := make([]string, 0, 2+len(args))
+	fullArgs = append(fullArgs, "--config", configPath)
 	fullArgs = append(fullArgs, args...)
 
 	cmd := exec.Command(binaryPath, fullArgs...)
