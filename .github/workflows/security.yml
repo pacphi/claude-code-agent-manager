@@ -25,22 +25,26 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: 1.24.11
+        go-version: 1.26.10
         cache-dependency-path: go.sum
 
     - name: Download dependencies
       run: go mod download
 
+    # govulncheck is installed at a pinned version instead of via
+    # golang/govulncheck-action, which always installs govulncheck@latest and
+    # broke this job once @latest required a newer Go than the one set up here.
+    # golang.org/x/vuln sets its own minimum Go version; raise this pin together
+    # with the Go version.
+    - name: Install govulncheck
+      run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+
     - name: Run govulncheck
-      uses: golang/govulncheck-action@v1
-      with:
-        go-version-input: 1.24.11
-        go-package: ./...
-        repo-checkout: false
+      run: govulncheck ./...
 
     - name: Run Nancy vulnerability scanner for Go modules
       run: |
-        go list -json -m all | docker run --rm -i sonatypecommunity/nancy:latest sleuth
+        go list -json -m all | docker run --rm -i sonatypecommunity/nancy:v2.1.0 sleuth
       continue-on-error: true
 
   dependency-review:
@@ -85,7 +89,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: 1.24.11
+        go-version: 1.26.10
         cache-dependency-path: go.sum
 
     - name: Build for CodeQL

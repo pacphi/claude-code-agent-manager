@@ -91,7 +91,7 @@ lint:
 		echo "This is OK - linting is automatically handled in GitHub Actions CI."; \
 		echo ""; \
 		echo "If you want to run linting locally, install with:"; \
-		echo "  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		echo "  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0"; \
 		echo ""; \
 	fi
 
@@ -108,7 +108,7 @@ deadcode:
 	else \
 		echo ""; \
 		echo "deadcode is not installed."; \
-		echo "Install with: go install golang.org/x/tools/cmd/deadcode@latest"; \
+		echo "Install with: go install golang.org/x/tools/cmd/deadcode@v0.52.0"; \
 		echo ""; \
 		exit 1; \
 	fi
