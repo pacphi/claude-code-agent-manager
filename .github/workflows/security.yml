@@ -61,6 +61,14 @@ jobs:
       with:
         fail-on-severity: moderate
         allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+        # golang.org/x/* is BSD-3-Clause plus Go's standard PATENTS grant, which
+        # GitHub reports as LicenseRef-scancode-google-patent-license-golang.
+        allow-dependencies-licenses: >-
+          pkg:golang/golang.org/x/crypto,
+          pkg:golang/golang.org/x/net,
+          pkg:golang/golang.org/x/sys,
+          pkg:golang/golang.org/x/term,
+          pkg:golang/golang.org/x/text
 
   codeql:
     name: CodeQL Analysis
