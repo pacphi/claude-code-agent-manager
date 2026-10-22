@@ -66,7 +66,7 @@ make build
 
 ## Requirements
 
-- **Go 1.24.11+** - Building Agent Manager
+- **Go 1.26.10+** - Building Agent Manager
 - **Git** - Repository operations
 - **Chrome/Chromium/Brave** (optional) - Marketplace features
 
