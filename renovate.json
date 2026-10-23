@@ -1,0 +1,97 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Managed from pacphi/mise-dotfiles. Replaces Dependabot version updates (2026-10-21).",
+  "extends": [
+    "config:recommended"
+  ],
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "gomod: dev commit prefix",
+      "matchCategories": [
+        "golang"
+      ],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "commitMessagePrefix": "chore:"
+    },
+    {
+      "description": "gomod: settings",
+      "matchCategories": [
+        "golang"
+      ],
+      "schedule": [
+        "* 0-5 * * 1"
+      ],
+      "labels": [
+        "dependencies",
+        "go"
+      ],
+      "commitMessagePrefix": "chore:"
+    },
+    {
+      "description": "github-actions: dev commit prefix",
+      "matchCategories": [
+        "ci"
+      ],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "commitMessagePrefix": "ci:"
+    },
+    {
+      "description": "github-actions: settings",
+      "matchCategories": [
+        "ci"
+      ],
+      "schedule": [
+        "* 0-5 * * 1"
+      ],
+      "labels": [
+        "dependencies",
+        "github-actions"
+      ],
+      "commitMessagePrefix": "ci:"
+    },
+    {
+      "description": "docker docker/**: dev commit prefix",
+      "matchCategories": [
+        "docker"
+      ],
+      "matchFileNames": [
+        "docker/**"
+      ],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "commitMessagePrefix": "chore:"
+    },
+    {
+      "description": "docker docker/**: settings",
+      "matchCategories": [
+        "docker"
+      ],
+      "matchFileNames": [
+        "docker/**"
+      ],
+      "schedule": [
+        "* 0-5 * * 1"
+      ],
+      "labels": [
+        "dependencies",
+        "docker"
+      ],
+      "commitMessagePrefix": "chore:"
+    }
+  ],
+  "prConcurrentLimit": 20
+}
